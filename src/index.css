@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Tailwind Preflight가 버튼 커서를 기본값(화살표)으로 되돌리는 걸 다시 pointer로 복구 */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
