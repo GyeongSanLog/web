@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import MapPage from "./pages/Map";
 
 // 데스크톱에서도 항상 "휴대폰 화면 하나"처럼 보이게 감싸는 틀
 function PhoneFrame({ children }) {
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/login" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/map" element={<MapPage />} />
         </Routes>
       </PhoneFrame>
     </BrowserRouter>
