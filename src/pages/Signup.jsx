@@ -76,7 +76,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="bg-white flex justify-center px-6 py-8">
+    <div className="h-full overflow-y-auto bg-white flex justify-center px-6 py-8">
       <div className="w-full max-w-sm">
 
         <div className="flex items-center gap-3 mb-8">
