@@ -6,6 +6,7 @@ import Search from "./pages/Search";
 import SpotDetail from "./pages/SpotDetail";
 import Gallery from "./pages/Gallery";
 import GroupDetail from "./pages/GroupDetail";
+import MapPage from "./pages/Map";
 
 // 데스크톱에서도 항상 "휴대폰 화면 하나"처럼 보이게 감싸는 틀
 //
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/spots/:id" element={<SpotDetail />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/gallery/:groupId" element={<GroupDetail />} />
+            <Route path="/map" element={<MapPage />} />
           </Routes>
         </div>
       </PhoneFrame>
