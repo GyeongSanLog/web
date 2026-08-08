@@ -7,3 +7,14 @@
     cursor: pointer;
   }
 }
+
+/* 가로 스크롤 카드 목록에서 스크롤바 숨기기 (홈 화면 등에서 사용) */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
