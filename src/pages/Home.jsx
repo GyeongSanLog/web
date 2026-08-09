@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
+import AppHeader from "../components/AppHeader";
 import { fetchAreaList } from "../api";
 
 export default function Home() {
@@ -21,6 +22,8 @@ export default function Home() {
   return (
     <div className="h-full flex flex-col">
 
+      <AppHeader />
+
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
 
         {/* 상단 인사말 + 알림 */}
@@ -33,7 +36,7 @@ export default function Home() {
           </div>
           <button
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-full bg-[#eef4ff] flex items-center justify-center shrink-0"
+            className="w-9 h-9 rounded-full bg-[#f3ece4] flex items-center justify-center shrink-0"
             aria-label="알림"
           >
             <BellIcon />
@@ -94,7 +97,7 @@ export default function Home() {
                 className="shrink-0 w-[100px] text-left"
               >
                 <div className="w-[100px] h-[100px] rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] relative flex items-center justify-center mb-1.5">
-                  <span className="absolute top-1.5 left-1.5 w-[18px] h-[18px] rounded-[5px] bg-white shadow-sm text-[11px] font-bold text-[#3d7ce0] flex items-center justify-center">
+                  <span className="absolute top-1.5 left-1.5 w-[18px] h-[18px] rounded-[5px] bg-white shadow-sm text-[11px] font-bold text-[#6F4A2C] flex items-center justify-center">
                     {spot.rank}
                   </span>
                   <ImageIcon />
@@ -122,8 +125,8 @@ const newsItems = [
 function BellIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-      <path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="#3d7ce0" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M10 18.5a2 2 0 0 0 4 0" stroke="#3d7ce0" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M6 10a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 14 6 10z" stroke="#6F4A2C" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M10 18.5a2 2 0 0 0 4 0" stroke="#6F4A2C" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

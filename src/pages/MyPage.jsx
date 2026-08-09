@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
+import AppHeader from "../components/AppHeader";
 
 // 더미데이터
 const user = {
@@ -19,6 +20,7 @@ export default function MyPage() {
 
   return (
     <div className="h-full flex flex-col">
+      <AppHeader />
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
         {/* 상단 타이틀 */}
         <h1 className="text-2xl font-bold text-[#1c1c1e] mb-5">마이페이지</h1>
@@ -28,8 +30,8 @@ export default function MyPage() {
           onClick={() => navigate("/profile")}
           className="w-full flex items-center gap-4 rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-4 mb-4 text-left"
         >
-          <div className="w-14 h-14 rounded-full bg-[#eef4ff] border-2 border-[#3d7ce0] flex items-center justify-center shrink-0">
-            <span className="text-lg font-bold text-[#3d7ce0]">
+          <div className="w-14 h-14 rounded-full bg-[#f3ece4] border-2 border-[#6F4A2C] flex items-center justify-center shrink-0">
+            <span className="text-lg font-bold text-[#6F4A2C]">
               {user.initial}
             </span>
           </div>
@@ -83,7 +85,7 @@ export default function MyPage() {
             onClick={handleLogout}
             className="w-full flex items-center px-4 py-4 text-left"
           >
-            <span className="text-sm font-medium text-[#e0403d]">로그아웃</span>
+            <span className="text-sm font-medium text-[#d70015]">로그아웃</span>
           </button>
         </div>
       </div>
@@ -150,8 +152,8 @@ function HeartIcon() {
     >
       <path
         d="M12 20s-7-4.5-9.2-9C1.4 8.2 2.6 5 5.7 5c1.9 0 3.1 1.2 3.8 2.3l.5.8.5-.8C11.2 6.2 12.4 5 14.3 5c3.1 0 4.3 3.2 2.9 6-2.2 4.5-9.2 9-9.2 9z"
-        fill="#3d7ce0"
-        stroke="#3d7ce0"
+        fill="#6F4A2C"
+        stroke="#6F4A2C"
         strokeWidth="1.4"
         strokeLinejoin="round"
       />

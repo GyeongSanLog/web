@@ -33,7 +33,7 @@ export default function SpotDetail() {
         <p className="text-sm text-[#98989d] mb-4">
           {error || "장소 정보를 불러올 수 없어요"}
         </p>
-        <button onClick={() => navigate(-1)} className="text-sm text-[#3d7ce0] font-medium">
+        <button onClick={() => navigate(-1)} className="text-sm text-[#6F4A2C] font-medium">
           돌아가기
         </button>
       </div>
@@ -72,7 +72,7 @@ export default function SpotDetail() {
 
       <div className="px-5 pt-4">
 
-        <p className="text-xs text-[#3d7ce0] mb-1">
+        <p className="text-xs text-[#6F4A2C] mb-1">
           {spot._display.category} · {spot.address}
         </p>
         <p className="text-[19px] font-medium text-[#1c1c1e] mb-3.5">
