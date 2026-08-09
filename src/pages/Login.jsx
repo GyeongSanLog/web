@@ -45,7 +45,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="이메일"
-            className="h-12 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 text-sm text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#3d7ce0] transition-colors"
+            className="h-12 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 text-sm text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors"
           />
 
           <div className="relative">
@@ -55,7 +55,7 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               placeholder="비밀번호"
-              className="w-full h-12 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 pr-14 text-sm text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#3d7ce0] transition-colors"
+              className="w-full h-12 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 pr-14 text-sm text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors"
             />
             <button
               type="button"
@@ -71,7 +71,7 @@ export default function Login() {
 
         <button
           onClick={handleLogin}
-          className="w-full h-12 rounded-xl bg-[#3d7ce0] text-white text-sm font-medium mt-3 mb-4 hover:bg-[#2f68c9] transition-colors"
+          className="w-full h-12 rounded-xl bg-[#6F4A2C] text-white text-sm font-medium mt-3 mb-4 hover:bg-[#543720] transition-colors"
         >
           로그인
         </button>
@@ -106,7 +106,7 @@ export default function Login() {
 
         <p className="text-center text-xs text-[#6e6e73]">
           계정이 없으신가요?{" "}
-          <button onClick={() => navigate("/signup")} className="text-[#3d7ce0] font-medium">
+          <button onClick={() => navigate("/signup")} className="text-[#6F4A2C] font-medium">
             회원가입
           </button>
         </p>
@@ -121,7 +121,7 @@ export default function Login() {
             onClick={() => setShowConfirm(false)}
           />
           <div className="relative bg-white rounded-2xl px-6 py-6 w-full max-w-[280px] text-center shadow-xl">
-            <div className="w-11 h-11 rounded-full bg-[#eef4ff] flex items-center justify-center mx-auto mb-3">
+            <div className="w-11 h-11 rounded-full bg-[#f3ece4] flex items-center justify-center mx-auto mb-3">
               <InfoIcon />
             </div>
             <p className="text-sm font-medium text-[#1c1c1e] mb-1.5">
@@ -141,7 +141,7 @@ export default function Login() {
               </button>
               <button
                 onClick={() => navigate("/home")}
-                className="flex-1 h-10 rounded-xl bg-[#3d7ce0] text-white text-sm font-medium"
+                className="flex-1 h-10 rounded-xl bg-[#6F4A2C] text-white text-sm font-medium"
               >
                 이동
               </button>
@@ -157,9 +157,9 @@ export default function Login() {
 function InfoIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9" stroke="#3d7ce0" strokeWidth="1.8" />
-      <path d="M12 11v5.5" stroke="#3d7ce0" strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx="12" cy="8" r="1" fill="#3d7ce0" />
+      <circle cx="12" cy="12" r="9" stroke="#6F4A2C" strokeWidth="1.8" />
+      <path d="M12 11v5.5" stroke="#6F4A2C" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="1" fill="#6F4A2C" />
     </svg>
   );
 }

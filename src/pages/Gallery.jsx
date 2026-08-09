@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
+import AppHeader from "../components/AppHeader";
 import { fetchGallery } from "../api";
 
 export default function Gallery() {
@@ -25,6 +26,8 @@ export default function Gallery() {
     // 화면 전체를 세로로 채우고, 스크롤 영역과 하단바 영역을 분리
     <div className="h-full flex flex-col">
 
+      <AppHeader />
+
       {/* 스크롤되는 콘텐츠 영역 (하단바는 이 안에 없음) */}
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
 
@@ -39,7 +42,7 @@ export default function Gallery() {
               {ongoing ? (
                 <button
                   onClick={() => navigate(`/gallery/${ongoing.id}`)}
-                  className="w-[130px] h-[130px] rounded-2xl bg-[#1c1c1e] border-[1.5px] border-[#3d7ce0] relative flex items-end p-2.5 text-left overflow-hidden shrink-0"
+                  className="w-[130px] h-[130px] rounded-2xl bg-[#1c1c1e] border-[1.5px] border-[#6F4A2C] relative flex items-end p-2.5 text-left overflow-hidden shrink-0"
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
                   <div className="relative">

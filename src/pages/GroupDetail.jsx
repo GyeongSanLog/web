@@ -34,7 +34,7 @@ export default function GroupDetail() {
     return (
       <div className="h-full bg-white flex flex-col items-center justify-center px-5">
         <p className="text-sm text-[#98989d] mb-4">{error || "정보를 불러올 수 없어요"}</p>
-        <button onClick={() => navigate(-1)} className="text-sm text-[#3d7ce0] font-medium">
+        <button onClick={() => navigate(-1)} className="text-sm text-[#6F4A2C] font-medium">
           돌아가기
         </button>
       </div>
@@ -100,7 +100,7 @@ export default function GroupDetail() {
             <div className="flex flex-col gap-2">
               {letters.map((letter) => (
                 <div key={letter.id} className="bg-[#f5f5f7] rounded-xl p-3 flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#3d7ce0] flex items-center justify-center text-xs text-white font-medium shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[#6F4A2C] flex items-center justify-center text-xs text-white font-medium shrink-0">
                     {letter.authorName[0]}
                   </div>
                   <div>

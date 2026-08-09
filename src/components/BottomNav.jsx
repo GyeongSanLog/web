@@ -21,7 +21,7 @@ export default function BottomNav() {
 
       <button
         onClick={() => navigate("/camera")}
-        className="w-11 h-11 rounded-full bg-[#3d7ce0] flex items-center justify-center -mt-2 shrink-0"
+        className="w-11 h-11 rounded-full bg-[#6F4A2C] flex items-center justify-center -mt-2 shrink-0"
         aria-label="촬영하기"
       >
         <PlusIcon />
@@ -45,7 +45,7 @@ function NavItem({ to, label, icon: Icon }) {
           <Icon active={isActive} />
           <span
             className={`text-[10px] whitespace-nowrap ${
-              isActive ? "text-[#3d7ce0] font-medium" : "text-[#98989d]"
+              isActive ? "text-[#6F4A2C] font-medium" : "text-[#98989d]"
             }`}
           >
             {label}
@@ -59,7 +59,7 @@ function NavItem({ to, label, icon: Icon }) {
 /* --- 아이콘: 외부 라이브러리 없이 순수 SVG로 --- */
 
 function HomeIcon({ active }) {
-  const c = active ? "#3d7ce0" : "#98989d";
+  const c = active ? "#6F4A2C" : "#98989d";
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path
@@ -73,7 +73,7 @@ function HomeIcon({ active }) {
 }
 
 function PinIcon({ active }) {
-  const c = active ? "#3d7ce0" : "#98989d";
+  const c = active ? "#6F4A2C" : "#98989d";
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path
@@ -87,10 +87,18 @@ function PinIcon({ active }) {
 }
 
 function GalleryIcon({ active }) {
-  const c = active ? "#3d7ce0" : "#98989d";
+  const c = active ? "#6F4A2C" : "#98989d";
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke={c} strokeWidth="1.8" />
+      <rect
+        x="3.5"
+        y="4.5"
+        width="17"
+        height="15"
+        rx="2.2"
+        stroke={c}
+        strokeWidth="1.8"
+      />
       <circle cx="8.3" cy="9.3" r="1.5" stroke={c} strokeWidth="1.6" />
       <path
         d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16"
@@ -104,7 +112,7 @@ function GalleryIcon({ active }) {
 }
 
 function UserIcon({ active }) {
-  const c = active ? "#3d7ce0" : "#98989d";
+  const c = active ? "#6F4A2C" : "#98989d";
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="8" r="3.3" stroke={c} strokeWidth="1.8" />

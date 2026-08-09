@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const inputClass =
-  "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#3d7ce0] transition-colors";
+  "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors";
 
 function Field({ label, children }) {
   return (
@@ -139,7 +139,7 @@ export default function Signup() {
                 className={`shrink-0 px-4 rounded-[10px] text-xs font-medium ${
                   emailVerified
                     ? "bg-[#e6f4ea] text-[#1f8b3f]"
-                    : "bg-[#3d7ce0] text-white"
+                    : "bg-[#6F4A2C] text-white"
                 }`}
               >
                 {emailVerified ? "완료" : "인증"}
@@ -185,7 +185,7 @@ export default function Signup() {
           onClick={handleSignup}
           className={`w-full h-12 rounded-xl text-sm font-medium mt-8 transition-colors ${
             canSubmit
-              ? "bg-[#3d7ce0] text-white hover:bg-[#2f68c9]"
+              ? "bg-[#6F4A2C] text-white hover:bg-[#543720]"
               : "bg-[#e5e5ea] text-[#98989d]"
           }`}
         >
