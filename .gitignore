@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# HTTPS 로컬 테스트용 인증서 / 환경변수
+*.pem
+*.crt
+*.key
+.cert/
+cert/
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
