@@ -8,6 +8,8 @@ import Gallery from "./pages/Gallery";
 import GroupDetail from "./pages/GroupDetail";
 import MapPage from "./pages/Map";
 import MyPage from "./pages/MyPage";
+import Camera from "./pages/Camera";
+import CameraResult from "./pages/CameraResult";
 
 // 데스크톱에서도 항상 "휴대폰 화면 하나"처럼 보이게 감싸는 틀
 //
@@ -40,6 +42,8 @@ export default function App() {
             <Route path="/gallery/:groupId" element={<GroupDetail />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/mypage" element={<MyPage />} />
+            <Route path="/camera" element={<Camera />} />
+            <Route path="/camera/result" element={<CameraResult />} />
           </Routes>
         </div>
       </PhoneFrame>
