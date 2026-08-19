@@ -6,13 +6,10 @@ import Search from "./pages/Search";
 import SpotDetail from "./pages/SpotDetail";
 import Gallery from "./pages/Gallery";
 import GroupDetail from "./pages/GroupDetail";
-<<<<<<< Updated upstream
 import MapPage from "./pages/Map";
 import MyPage from "./pages/MyPage";
-=======
 import SetlogViewer from "./pages/SetlogViewer";
 import Camera from "./pages/Camera";
->>>>>>> Stashed changes
 
 // 데스크톱에서도 항상 "휴대폰 화면 하나"처럼 보이게 감싸는 틀
 //
@@ -43,13 +40,10 @@ export default function App() {
             <Route path="/spots/:id" element={<SpotDetail />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/gallery/:groupId" element={<GroupDetail />} />
-<<<<<<< Updated upstream
             <Route path="/map" element={<MapPage />} />
             <Route path="/mypage" element={<MyPage />} />
-=======
             <Route path="/setlog/:groupId" element={<SetlogViewer />} />
             <Route path="/camera/:groupId" element={<Camera />} />
->>>>>>> Stashed changes
           </Routes>
         </div>
       </PhoneFrame>
