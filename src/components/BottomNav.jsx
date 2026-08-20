@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { fetchOngoingGroup } from "../api";
+import { fetchOngoingGroup } from "../api/groups";
 
 const navItems = [
   { to: "/home", label: "홈", icon: HomeIcon },
@@ -21,7 +21,8 @@ export default function BottomNav() {
       const ongoing = await fetchOngoingGroup();
       if (ongoing) {
         // 진행중인 그룹이 있으면 바로 촬영 화면으로
-        navigate(`/camera/${ongoing.id}`);
+        // (Camera.jsx가 groupId를 받지 않는 구조라 경로에 포함하지 않음)
+        navigate("/camera");
       } else {
         // 없으면 새 그룹 생성 여부를 묻는 모달 표시
         setShowNoGroupModal(true);
@@ -65,7 +66,7 @@ export default function BottomNav() {
             onClick={() => setShowNoGroupModal(false)}
           />
           <div className="relative bg-white rounded-2xl px-6 py-6 w-full max-w-[280px] text-center shadow-xl">
-            <div className="w-11 h-11 rounded-full bg-[#eef4ff] flex items-center justify-center mx-auto mb-3">
+            <div className="w-11 h-11 rounded-full bg-[#f3ece4] flex items-center justify-center mx-auto mb-3">
               <MapPlusIcon />
             </div>
             <p className="text-sm font-medium text-[#1c1c1e] mb-1.5">
@@ -144,15 +145,7 @@ function GalleryIcon({ active }) {
   const c = active ? "#6F4A2C" : "#98989d";
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <rect
-        x="3.5"
-        y="4.5"
-        width="17"
-        height="15"
-        rx="2.2"
-        stroke={c}
-        strokeWidth="1.8"
-      />
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke={c} strokeWidth="1.8" />
       <circle cx="8.3" cy="9.3" r="1.5" stroke={c} strokeWidth="1.6" />
       <path d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16" stroke={c} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -189,9 +182,9 @@ function SpinnerIcon() {
 function MapPlusIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <path d="M9 5L4 7v13l5-2 6 2 5-2V5l-5 2-6-2z" stroke="#3d7ce0" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M9 5v13" stroke="#3d7ce0" strokeWidth="1.7" />
-      <path d="M18 3v6M15 6h6" stroke="#3d7ce0" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M9 5L4 7v13l5-2 6 2 5-2V5l-5 2-6-2z" stroke="#6F4A2C" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M9 5v13" stroke="#6F4A2C" strokeWidth="1.7" />
+      <path d="M18 3v6M15 6h6" stroke="#6F4A2C" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

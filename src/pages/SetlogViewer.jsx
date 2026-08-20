@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchGroupSessions } from "../api";
+import { fetchGroupSessions } from "../api/groups";
 
 export default function SetlogViewer() {
   const { groupId } = useParams();

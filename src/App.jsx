@@ -6,10 +6,14 @@ import Search from "./pages/Search";
 import SpotDetail from "./pages/SpotDetail";
 import Gallery from "./pages/Gallery";
 import GroupDetail from "./pages/GroupDetail";
-import MapPage from "./pages/Map";
-import MyPage from "./pages/MyPage";
-import SetlogViewer from "./pages/SetlogViewer";
 import Camera from "./pages/Camera";
+import CameraResult from "./pages/CameraResult";
+import MyPage from "./pages/MyPage";
+import Map from "./pages/Map";
+// import SetlogViewer from "./pages/SetlogViewer";
+// ↑ 분할화면 뷰어는 보류 상태. 촬영 흐름은 당분간 팀원 버전(Camera → CameraResult,
+// groupId 없이 개별 멤버 선택 + 편지 방식)으로 통일. 파일은 남겨뒀으니
+// 다시 쓰기로 하면 이 줄과 아래 <Route path="/setlog/:groupId" .../> 주석만 풀면 됨.
 
 // 데스크톱에서도 항상 "휴대폰 화면 하나"처럼 보이게 감싸는 틀
 //
@@ -40,10 +44,11 @@ export default function App() {
             <Route path="/spots/:id" element={<SpotDetail />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/gallery/:groupId" element={<GroupDetail />} />
-            <Route path="/map" element={<MapPage />} />
+            <Route path="/camera" element={<Camera />} />
+            <Route path="/camera/result" element={<CameraResult />} />
             <Route path="/mypage" element={<MyPage />} />
-            <Route path="/setlog/:groupId" element={<SetlogViewer />} />
-            <Route path="/camera/:groupId" element={<Camera />} />
+            <Route path="/map" element={<Map />} />
+            {/* <Route path="/setlog/:groupId" element={<SetlogViewer />} /> */}
           </Routes>
         </div>
       </PhoneFrame>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { register, checkNicknameAvailable } from "../api/auth";
 
 const inputClass =
   "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors";
@@ -25,8 +26,43 @@ export default function Signup() {
   });
   const [emailVerified, setEmailVerified] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // 닉네임 중복 확인 상태
+  // null: 아직 확인 안 함 / true: 사용 가능 / false: 이미 사용중
+  const [nicknameStatus, setNicknameStatus] = useState(null);
+  const [checkingNickname, setCheckingNickname] = useState(false);
+  const [checkedNicknameValue, setCheckedNicknameValue] = useState("");
 
   const update = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+
+  const handleNicknameChange = (e) => {
+    setForm({ ...form, nickname: e.target.value });
+    setNicknameStatus(null); // 닉네임을 바꾸면 이전 확인 결과는 무효화
+  };
+
+  const handleCheckNickname = async () => {
+    const value = form.nickname.trim();
+    if (!value) {
+      setError("닉네임을 입력해주세요");
+      return;
+    }
+    setError("");
+    setCheckingNickname(true);
+    try {
+      const available = await checkNicknameAvailable(value);
+      setNicknameStatus(available);
+      setCheckedNicknameValue(value);
+    } catch (err) {
+      setError(err.message || "닉네임 확인에 실패했습니다");
+    } finally {
+      setCheckingNickname(false);
+    }
+  };
+
+  // 확인된 닉네임과 현재 입력값이 정확히 같아야 "사용 가능"으로 인정
+  const nicknameConfirmed =
+    nicknameStatus === true && checkedNicknameValue === form.nickname;
 
   const pwMismatch =
     form.passwordConfirm.length > 0 && form.password !== form.passwordConfirm;
@@ -36,6 +72,7 @@ export default function Signup() {
   const canSubmit =
     form.name &&
     form.nickname &&
+    nicknameConfirmed &&
     form.email &&
     emailVerified &&
     form.password.length >= 8 &&
@@ -63,16 +100,21 @@ export default function Signup() {
       return;
     }
 
-    // TODO: 백엔드 회원가입 API 연동
-    // const res = await fetch("http://localhost:8000/auth/signup", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(form),
-    // });
-    // if (!res.ok) { setError("회원가입에 실패했습니다"); return; }
-
-    console.log("회원가입 시도:", form);
-    navigate("/login");
+    setSubmitting(true);
+    try {
+      // 명세서 필드만 전송 (passwordConfirm, 프로필 사진은 이 API 대상이 아님)
+      await register({
+        email: form.email,
+        nickname: form.nickname,
+        name: form.name,
+        password: form.password,
+      });
+      navigate("/home"); // register 응답에 토큰이 바로 오므로 로그인 화면을 거치지 않고 바로 홈으로
+    } catch (err) {
+      setError(err.message || "회원가입에 실패했습니다");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -113,12 +155,39 @@ export default function Signup() {
           </Field>
 
           <Field label="닉네임">
-            <input
-              value={form.nickname}
-              onChange={update("nickname")}
-              placeholder="셋로그에 표시될 이름"
-              className={inputClass}
-            />
+            <div className="flex gap-2">
+              <input
+                value={form.nickname}
+                onChange={handleNicknameChange}
+                placeholder="셋로그에 표시될 이름"
+                className={inputClass}
+              />
+              <button
+                onClick={handleCheckNickname}
+                disabled={checkingNickname || !form.nickname.trim()}
+                className={`shrink-0 px-4 rounded-[10px] text-xs font-medium disabled:opacity-50 ${
+                  nicknameConfirmed
+                    ? "bg-[#e6f4ea] text-[#1f8b3f]"
+                    : "bg-[#6F4A2C] text-white"
+                }`}
+              >
+                {checkingNickname
+                  ? "확인 중..."
+                  : nicknameConfirmed
+                  ? "확인됨"
+                  : "중복확인"}
+              </button>
+            </div>
+            {nicknameStatus === false && (
+              <p className="mt-1 text-xs text-[#d70015]">
+                이미 사용중인 닉네임이에요
+              </p>
+            )}
+            {nicknameConfirmed && (
+              <p className="mt-1 text-xs text-[#1f8b3f]">
+                사용 가능한 닉네임이에요
+              </p>
+            )}
           </Field>
 
           <Field label="이메일">
@@ -183,13 +252,14 @@ export default function Signup() {
 
         <button
           onClick={handleSignup}
+          disabled={submitting}
           className={`w-full h-12 rounded-xl text-sm font-medium mt-8 transition-colors ${
-            canSubmit
-              ? "bg-[#6F4A2C] text-white hover:bg-[#543720]"
+            canSubmit && !submitting
+              ? "bg-[#6F4A2C] text-white hover:bg-[#5c3d24]"
               : "bg-[#e5e5ea] text-[#98989d]"
           }`}
         >
-          가입 완료
+          {submitting ? "가입 처리 중..." : "가입 완료"}
         </button>
 
       </div>

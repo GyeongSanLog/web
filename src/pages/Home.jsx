@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import AppHeader from "../components/AppHeader";
-import { fetchAreaList } from "../api";
+import { fetchAreaList } from "../api/areas";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -21,19 +21,8 @@ export default function Home() {
 
   return (
     <div className="h-full flex flex-col">
-
-      <AppHeader />
-
-      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
-
-        {/* 상단 인사말 + 알림 */}
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <p className="text-sm text-[#6e6e73]">안녕하세요</p>
-            <p className="text-lg font-medium text-[#1c1c1e] mt-0.5">
-              오늘은 어디로 가볼까요
-            </p>
-          </div>
+      <AppHeader
+        right={
           <button
             onClick={() => navigate("/notifications")}
             className="w-9 h-9 rounded-full bg-[#f3ece4] flex items-center justify-center shrink-0"
@@ -41,6 +30,17 @@ export default function Home() {
           >
             <BellIcon />
           </button>
+        }
+      />
+
+      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
+
+        {/* 상단 인사말 */}
+        <div className="mb-5">
+          <p className="text-sm text-[#6e6e73]">안녕하세요</p>
+          <p className="text-lg font-medium text-[#1c1c1e] mt-0.5">
+            오늘은 어디로 가볼까요
+          </p>
         </div>
 
         {/* 검색 */}

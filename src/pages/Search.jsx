@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchAreaList } from "../api";
+import { fetchAreaList } from "../api/areas";
 
 export default function Search() {
   const navigate = useNavigate();
