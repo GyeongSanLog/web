@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import AppHeader from "../components/AppHeader";
-import { fetchGallery } from "../api";
+import { fetchGallery } from "../api/groups";
 
 export default function Gallery() {
   const navigate = useNavigate();
@@ -23,12 +23,9 @@ export default function Gallery() {
   const groupedPast = groupByMonth(past);
 
   return (
-    // 화면 전체를 세로로 채우고, 스크롤 영역과 하단바 영역을 분리
     <div className="h-full flex flex-col">
-
       <AppHeader />
 
-      {/* 스크롤되는 콘텐츠 영역 (하단바는 이 안에 없음) */}
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
 
         <p className="text-lg font-medium text-[#1c1c1e] mb-5">갤러리</p>
@@ -102,7 +99,6 @@ export default function Gallery() {
 
       </div>
 
-      {/* 하단바는 스크롤 영역 밖에 위치 (항상 고정) */}
       <BottomNav />
     </div>
   );

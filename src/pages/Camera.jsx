@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 // 촬영 시간(초) — 셔터를 누르면 이 시간만큼 영상이 녹화됩니다.
@@ -22,7 +22,6 @@ export default function Camera() {
     let cancelled = false;
 
     async function start() {
-      // 이전 스트림 정리
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
@@ -42,7 +41,6 @@ export default function Camera() {
         setReady(true);
         setDenied(false);
       } catch {
-        // 카메라 권한 거부 / 미지원 → 더미 화면으로 대체
         setDenied(true);
         setReady(false);
       }
@@ -54,7 +52,6 @@ export default function Camera() {
     };
   }, [facingUser]);
 
-  // 언마운트 시 스트림 완전 종료
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -71,14 +68,12 @@ export default function Camera() {
     const startedAt = Date.now();
     const totalMs = RECORD_SECONDS * 1000;
 
-    // 진행률 애니메이션
     const tick = setInterval(() => {
       const ratio = Math.min((Date.now() - startedAt) / totalMs, 1);
       setProgress(ratio);
       if (ratio >= 1) clearInterval(tick);
     }, 30);
 
-    // 실제 녹화 (카메라가 있을 때)
     let recorder = null;
     if (streamRef.current && typeof MediaRecorder !== "undefined") {
       try {
@@ -94,11 +89,9 @@ export default function Camera() {
       }
     }
 
-    // 2초 뒤 녹화 종료 → 결과 페이지로 이동
     setTimeout(() => {
       clearInterval(tick);
 
-      // 정지 화면(포스터)용 프레임 캡처
       let poster = null;
       const v = videoRef.current;
       if (v && v.videoWidth) {
@@ -114,7 +107,6 @@ export default function Camera() {
       }
 
       const goNext = (videoUrl) => {
-        // 스트림 종료
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
@@ -134,13 +126,11 @@ export default function Camera() {
     }, totalMs);
   }
 
-  // 진행률 링 계산
   const ringR = 34;
   const ringC = 2 * Math.PI * ringR;
 
   return (
     <div className="h-full flex flex-col bg-black relative overflow-hidden">
-      {/* 카메라 미리보기 */}
       {!denied ? (
         <video
           ref={videoRef}
@@ -162,7 +152,6 @@ export default function Camera() {
         </div>
       )}
 
-      {/* 상단 그라데이션 + 컨트롤 */}
       <div className="relative z-10 pt-10 px-5 pb-4 bg-gradient-to-b from-black/55 to-transparent flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
@@ -184,7 +173,6 @@ export default function Camera() {
         </button>
       </div>
 
-      {/* 안내 문구 */}
       <div className="relative z-10 flex-1 flex items-start justify-center pt-6 pointer-events-none">
         {recording ? (
           <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/85 text-white text-xs font-medium">
@@ -198,7 +186,6 @@ export default function Camera() {
         )}
       </div>
 
-      {/* 하단 셔터 영역 */}
       <div className="relative z-10 pb-10 pt-6 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-center">
         <button
           onClick={handleShutter}
@@ -206,7 +193,6 @@ export default function Camera() {
           className="relative w-[76px] h-[76px] flex items-center justify-center"
           aria-label="촬영"
         >
-          {/* 진행률 링 */}
           <svg
             className="absolute inset-0 -rotate-90"
             width="76"
@@ -233,7 +219,6 @@ export default function Camera() {
               strokeDashoffset={ringC * (1 - progress)}
             />
           </svg>
-          {/* 셔터 버튼 코어 */}
           <span
             className={`transition-all duration-200 ${
               recording
@@ -252,12 +237,7 @@ export default function Camera() {
 function CloseIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M6 6l12 12M18 6L6 18"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
+      <path d="M6 6l12 12M18 6L6 18" stroke="white" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -265,34 +245,10 @@ function CloseIcon() {
 function FlipIcon() {
   return (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M4 8a8 8 0 0 1 13.5-3.5L20 7"
-        stroke="white"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M20 4v3h-3"
-        stroke="white"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M20 16a8 8 0 0 1-13.5 3.5L4 17"
-        stroke="white"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M4 20v-3h3"
-        stroke="white"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M4 8a8 8 0 0 1 13.5-3.5L20 7" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 4v3h-3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 16a8 8 0 0 1-13.5 3.5L4 17" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 20v-3h3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -300,25 +256,9 @@ function FlipIcon() {
 function CameraOffIcon() {
   return (
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M3 3l18 18"
-        stroke="#6b6b6b"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M4.5 7.5A1.5 1.5 0 0 0 3 9v9a1.5 1.5 0 0 0 1.5 1.5h13.5"
-        stroke="#6b6b6b"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M9 5h6l1.5 2.5H21V16"
-        stroke="#6b6b6b"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M3 3l18 18" stroke="#6b6b6b" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M4.5 7.5A1.5 1.5 0 0 0 3 9v9a1.5 1.5 0 0 0 1.5 1.5h13.5" stroke="#6b6b6b" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M9 5h6l1.5 2.5H21V16" stroke="#6b6b6b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

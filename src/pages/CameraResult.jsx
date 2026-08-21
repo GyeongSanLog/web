@@ -209,13 +209,7 @@ export default function CameraResult() {
 function ArrowLeftIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M15 19l-7-7 7-7"
-        stroke="#1c1c1e"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M15 19l-7-7 7-7" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -240,19 +234,8 @@ function PlaceholderPlay() {
 function RetakeIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M4 12a8 8 0 1 1 2.3 5.6"
-        stroke="#6F4A2C"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M4 20v-4h4"
-        stroke="#6F4A2C"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M4 12a8 8 0 1 1 2.3 5.6" stroke="#6F4A2C" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 20v-4h4" stroke="#6F4A2C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -260,13 +243,7 @@ function RetakeIcon() {
 function CheckIcon() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M5 12.5l4.5 4.5L19 7.5"
-        stroke="#6F4A2C"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M5 12.5l4.5 4.5L19 7.5" stroke="#6F4A2C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

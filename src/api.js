@@ -275,3 +275,129 @@ export async function fetchGroupDetail(groupId) {
     letters: mockLettersByGroup[id] ?? [],
   };
 }
+
+// ============================================================
+// 셋로그 세션 (분할 화면 브이로그) 임시 더미데이터
+//
+// 셋로그 앱 방식:
+// - 앱이 특정 시각에 알림 → 멤버들이 각자 2~4초 짧은 영상 촬영
+// - 같은 시각에 찍힌 영상들이 하나의 "세션"으로 묶여 분할 화면으로 재생
+// - 멤버 수에 따라 2분할 / 3분할 / 4분할 레이아웃
+//
+// 백엔드 명세 확정 시 필드명만 맞춰 교체하면 됨.
+// ============================================================
+
+const mockSessionsByGroup = {
+  100: [
+    {
+      id: 1,
+      capturedAt: "14:32",
+      date: "2026-08-01",
+      entries: [
+        { userId: 1, userName: "신유진", videoUrl: "", caption: "협재 바다 진짜 예쁘다" },
+        { userId: 2, userName: "김민지", videoUrl: "", caption: "물 완전 맑아" },
+        { userId: 3, userName: "이현우", videoUrl: "", caption: "선크림 발라야겠다" },
+      ],
+    },
+    {
+      id: 2,
+      capturedAt: "11:05",
+      date: "2026-08-01",
+      entries: [
+        { userId: 1, userName: "신유진", videoUrl: "", caption: "숙소 체크인 완료!" },
+        { userId: 2, userName: "김민지", videoUrl: "", caption: "짐 정리 중" },
+      ],
+    },
+    {
+      id: 3,
+      capturedAt: "09:40",
+      date: "2026-08-01",
+      entries: [
+        { userId: 1, userName: "신유진", videoUrl: "", caption: "출발 전 공항에서" },
+        { userId: 2, userName: "김민지", videoUrl: "", caption: "비행기 기다리는 중" },
+        { userId: 3, userName: "이현우", videoUrl: "", caption: "면세점 구경" },
+      ],
+    },
+  ],
+  101: [
+    {
+      id: 4,
+      capturedAt: "15:10",
+      date: "2026-07-18",
+      entries: [
+        { userId: 1, userName: "신유진", videoUrl: "", caption: "불국사 도착" },
+        { userId: 2, userName: "김민지", videoUrl: "", caption: "날씨 좋다" },
+      ],
+    },
+  ],
+  102: [
+    {
+      id: 5,
+      capturedAt: "20:00",
+      date: "2026-07-10",
+      entries: [
+        { userId: 1, userName: "신유진", videoUrl: "", caption: "해운대 야경" },
+        { userId: 2, userName: "김민지", videoUrl: "", caption: "야시장 구경" },
+        { userId: 3, userName: "이현우", videoUrl: "", caption: "바람 시원하다" },
+      ],
+    },
+  ],
+  103: [],
+};
+
+/**
+ * 그룹의 셋로그 세션 목록 조회 (분할 화면 재생용)
+ * 최신순 정렬
+ */
+export async function fetchGroupSessions(groupId) {
+  // TODO: 실제 연동 시 아래 fetch로 교체
+  // const res = await fetch(`${BASE_URL}/groups/${groupId}/sessions`);
+  // return res.json();
+
+  await delay();
+
+  const id = Number(groupId);
+  const group =
+    mockOngoingGroup.id === id
+      ? mockOngoingGroup
+      : mockGroups.find((g) => g.id === id);
+
+  if (!group) throw new Error("존재하지 않는 여행 그룹입니다");
+
+  return {
+    group,
+    sessions: mockSessionsByGroup[id] ?? [],
+  };
+}
+
+/**
+ * 셋로그 업로드 (촬영 완료 후)
+ */
+export async function uploadSetlog({ groupId, videoBlob, caption }) {
+  // TODO: 실제 연동 시 FormData로 영상 파일 업로드
+  // const formData = new FormData();
+  // formData.append("video", videoBlob);
+  // formData.append("caption", caption);
+  // const res = await fetch(`${BASE_URL}/groups/${groupId}/setlogs`, {
+  //   method: "POST",
+  //   body: formData,
+  // });
+  // return res.json();
+
+  await delay(600);
+  console.log("셋로그 업로드 (mock):", { groupId, caption });
+  return { success: true };
+}
+
+/**
+ * 진행중인 여행 그룹 조회 (하단 네비바 + 버튼 클릭 시 사용)
+ * 오늘 날짜가 그룹의 시작~종료일 사이인 그룹이 있으면 반환, 없으면 null
+ */
+export async function fetchOngoingGroup() {
+  // TODO: 실제 연동 시 아래 fetch로 교체
+  // const res = await fetch(`${BASE_URL}/groups/ongoing`);
+  // return res.json(); // 없으면 { ongoing: null }
+
+  const { ongoing } = await fetchGallery();
+  return ongoing;
+}
