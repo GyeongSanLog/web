@@ -75,7 +75,11 @@ export async function authFetch(url, options = {}) {
     fetch(url, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        // FormData(멀티파트 업로드)는 브라우저가 boundary를 포함해 직접
+        // Content-Type을 설정해야 하므로 기본값을 강제하지 않음
+        ...(options.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
         ...(options.headers || {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

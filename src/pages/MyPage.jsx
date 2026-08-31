@@ -1,20 +1,31 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import AppHeader from "../components/AppHeader";
-
-// 더미데이터
-const user = {
-  name: "신유진",
-  nickname: "여행중독자",
-  initial: "신",
-  favoriteCount: 12,
-};
+import { fetchMyInfo } from "../api/member";
+import { logout } from "../api/auth";
 
 export default function MyPage() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleLogout = () => {
-    // TODO: 로그아웃 API 연동
+  useEffect(() => {
+    fetchMyInfo()
+      .then(setUser)
+      .catch((err) => {
+        if (err.message === "AUTH_EXPIRED") {
+          navigate("/login");
+          return;
+        }
+        setError(err.message || "회원 정보를 불러오지 못했습니다");
+      })
+      .finally(() => setLoading(false));
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -26,25 +37,29 @@ export default function MyPage() {
         <h1 className="text-2xl font-bold text-[#1c1c1e] mb-5">마이페이지</h1>
 
         {/* 프로필 카드 */}
-        <button
-          onClick={() => navigate("/profile")}
-          className="w-full flex items-center gap-4 rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-4 mb-4 text-left"
-        >
-          <div className="w-14 h-14 rounded-full bg-[#f3ece4] border-2 border-[#6F4A2C] flex items-center justify-center shrink-0">
-            <span className="text-lg font-bold text-[#6F4A2C]">
-              {user.initial}
-            </span>
+        {loading ? (
+          <div className="w-full rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-4 mb-4 h-[82px] animate-pulse" />
+        ) : error ? (
+          <div className="w-full rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-4 mb-4">
+            <p className="text-sm text-[#98989d]">{error}</p>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-semibold text-[#1c1c1e] truncate">
-              {user.nickname}
-            </p>
-            <p className="text-sm text-[#98989d] mt-0.5 truncate">
-              {user.name}
-            </p>
-          </div>
-          <ChevronIcon />
-        </button>
+        ) : (
+          <button
+            onClick={() => navigate("/profile", { state: { user } })}
+            className="w-full flex items-center gap-4 rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-4 mb-4 text-left"
+          >
+            <ProfileAvatar user={user} size={56} />
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-[#1c1c1e] truncate">
+                {user.nickname}
+              </p>
+              <p className="text-sm text-[#98989d] mt-0.5 truncate">
+                {user.name}
+              </p>
+            </div>
+            <ChevronIcon />
+          </button>
+        )}
 
         {/* 찜 목록 */}
         <button
@@ -55,7 +70,6 @@ export default function MyPage() {
           <span className="flex-1 text-sm font-medium text-[#1c1c1e]">
             찜 목록
           </span>
-          <span className="text-sm text-[#98989d]">{user.favoriteCount}곳</span>
           <ChevronIcon />
         </button>
 
@@ -88,6 +102,14 @@ export default function MyPage() {
             <span className="text-sm font-medium text-[#d70015]">로그아웃</span>
           </button>
         </div>
+
+        {/* 실수로 누르기 쉬우면 안 되니까 다른 메뉴들과 묶지 않고 아래에 조용히 둠 */}
+        <button
+          onClick={() => navigate("/account/delete")}
+          className="w-full text-center text-xs text-[#98989d] underline mt-6"
+        >
+          회원 탈퇴
+        </button>
       </div>
 
       <BottomNav />
@@ -96,6 +118,35 @@ export default function MyPage() {
 }
 
 /* --- 하위 컴포넌트 --- */
+
+export function ProfileAvatar({ user, size = 56 }) {
+  const initial = (user?.nickname || user?.name || "?").charAt(0);
+
+  if (user?.profileImageUrl) {
+    return (
+      <img
+        src={user.profileImageUrl}
+        alt="프로필 사진"
+        className="rounded-full object-cover border-2 border-[#6F4A2C] shrink-0"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="rounded-full bg-[#f3ece4] border-2 border-[#6F4A2C] flex items-center justify-center shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <span
+        className="font-bold text-[#6F4A2C]"
+        style={{ fontSize: size * 0.32 }}
+      >
+        {initial}
+      </span>
+    </div>
+  );
+}
 
 function SectionLabel({ children }) {
   return (
