@@ -20,9 +20,9 @@ export default function BottomNav() {
     try {
       const ongoing = await fetchOngoingGroup();
       if (ongoing) {
-        // 진행중인 그룹이 있으면 바로 촬영 화면으로
-        // (Camera.jsx가 groupId를 받지 않는 구조라 경로에 포함하지 않음)
-        navigate("/camera");
+        // 진행중인 그룹이 있으면 그 그룹으로 바로 촬영 화면 진입
+        // (Camera.jsx가 이제 groupId를 경로 파라미터로 받는 구조로 변경됨)
+        navigate(`/camera/${ongoing.id}`);
       } else {
         // 없으면 새 그룹 생성 여부를 묻는 모달 표시
         setShowNoGroupModal(true);
@@ -86,8 +86,6 @@ export default function BottomNav() {
                 onClick={() => {
                   setShowNoGroupModal(false);
                   navigate("/gallery/new");
-                  // TODO: /gallery/new (그룹 생성 화면) 아직 미구현.
-                  // 만들어지면 이 경로로 정상 연결됨.
                 }}
                 className="flex-1 h-10 rounded-xl bg-[#6F4A2C] text-white text-sm font-medium"
               >
