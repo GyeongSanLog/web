@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { register, checkNicknameAvailable } from "../api/auth";
+import {
+  register,
+  checkNicknameAvailable,
+  sendEmailCode,
+  verifyEmailCode,
+} from "../api/auth";
 
 const inputClass =
   "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors";
@@ -14,6 +19,15 @@ function Field({ label, children }) {
   );
 }
 
+function formatMMSS(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+const CODE_VALID_SECONDS = 5 * 60; // 인증코드 유효시간 5분
+const RESEND_WAIT_SECONDS = 60; // 재발송 제한 60초
+
 export default function Signup() {
   const navigate = useNavigate();
 
@@ -24,21 +38,44 @@ export default function Signup() {
     password: "",
     passwordConfirm: "",
   });
-  const [emailVerified, setEmailVerified] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // 닉네임 중복 확인 상태
-  // null: 아직 확인 안 함 / true: 사용 가능 / false: 이미 사용중
   const [nicknameStatus, setNicknameStatus] = useState(null);
   const [checkingNickname, setCheckingNickname] = useState(false);
   const [checkedNicknameValue, setCheckedNicknameValue] = useState("");
+
+  // 이메일 인증 상태
+  // codeSent: 인증코드가 발송되어 입력창이 펼쳐진 상태
+  // emailVerified: verify API를 통과해서 실제로 인증이 완료된 상태
+  const [codeSent, setCodeSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailForVerification, setEmailForVerification] = useState(""); // 인증을 시작한 이메일 (이후 바뀌면 무효화)
+  const [code, setCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  // 카운트다운 (초 단위). 0이면 만료/재발송 가능 상태.
+  const [validRemaining, setValidRemaining] = useState(0); // 인증코드 유효시간 카운트다운
+  const [resendRemaining, setResendRemaining] = useState(0); // 재발송 제한 카운트다운
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (!codeSent) return;
+    timerRef.current = setInterval(() => {
+      setValidRemaining((v) => Math.max(0, v - 1));
+      setResendRemaining((v) => Math.max(0, v - 1));
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [codeSent]);
 
   const update = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
   const handleNicknameChange = (e) => {
     setForm({ ...form, nickname: e.target.value });
-    setNicknameStatus(null); // 닉네임을 바꾸면 이전 확인 결과는 무효화
+    setNicknameStatus(null);
   };
 
   const handleCheckNickname = async () => {
@@ -60,7 +97,6 @@ export default function Signup() {
     }
   };
 
-  // 확인된 닉네임과 현재 입력값이 정확히 같아야 "사용 가능"으로 인정
   const nicknameConfirmed =
     nicknameStatus === true && checkedNicknameValue === form.nickname;
 
@@ -68,6 +104,59 @@ export default function Signup() {
     form.passwordConfirm.length > 0 && form.password !== form.passwordConfirm;
 
   const pwTooShort = form.password.length > 0 && form.password.length < 8;
+
+  // 이메일을 인증 시작 시점 이후에 바꿨으면 인증 무효 처리
+  const handleEmailChange = (e) => {
+    update("email")(e);
+    if (emailForVerification && e.target.value !== emailForVerification) {
+      setEmailVerified(false);
+      setCodeSent(false);
+      setCode("");
+    }
+  };
+
+  const handleSendCode = async () => {
+    if (!form.email.includes("@")) {
+      setEmailError("올바른 이메일 형식을 입력해주세요");
+      return;
+    }
+    setEmailError("");
+    setSendingCode(true);
+    try {
+      await sendEmailCode(form.email);
+      setEmailForVerification(form.email);
+      setCodeSent(true);
+      setEmailVerified(false);
+      setCode("");
+      setValidRemaining(CODE_VALID_SECONDS);
+      setResendRemaining(RESEND_WAIT_SECONDS);
+    } catch (err) {
+      setEmailError(err.message || "인증코드 발송에 실패했습니다");
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!code.trim()) {
+      setEmailError("인증코드를 입력해주세요");
+      return;
+    }
+    if (validRemaining <= 0) {
+      setEmailError("인증코드가 만료됐어요. 다시 발송해주세요");
+      return;
+    }
+    setEmailError("");
+    setVerifyingCode(true);
+    try {
+      await verifyEmailCode({ email: form.email, code: code.trim() });
+      setEmailVerified(true);
+    } catch (err) {
+      setEmailError(err.message || "인증에 실패했습니다");
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
 
   const canSubmit =
     form.name &&
@@ -77,20 +166,6 @@ export default function Signup() {
     emailVerified &&
     form.password.length >= 8 &&
     form.password === form.passwordConfirm;
-
-  const handleVerifyEmail = async () => {
-    if (!form.email.includes("@")) {
-      setError("올바른 이메일 형식을 입력해주세요");
-      return;
-    }
-    setError("");
-
-    // TODO: 백엔드 인증메일 발송 API 연동
-    // await fetch("http://localhost:8000/auth/send-verification", { ... });
-
-    console.log("인증메일 발송:", form.email);
-    setEmailVerified(true);
-  };
 
   const handleSignup = async () => {
     setError("");
@@ -111,7 +186,12 @@ export default function Signup() {
       });
       navigate("/home"); // register 응답에 토큰이 바로 오므로 로그인 화면을 거치지 않고 바로 홈으로
     } catch (err) {
-      setError(err.message || "회원가입에 실패했습니다");
+      // 이메일 인증 후 30분이 지나면 서버가 다시 거부할 수 있음 —
+      // 이 경우 사용자에게 재인증을 안내
+      setError(
+        err.message ||
+          "회원가입에 실패했습니다. 인증이 오래됐다면 이메일 인증을 다시 진행해주세요"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -195,25 +275,80 @@ export default function Signup() {
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => {
-                  update("email")(e);
-                  setEmailVerified(false);
-                }}
+                onChange={handleEmailChange}
                 placeholder="example@mail.com"
-                className={inputClass}
+                disabled={emailVerified}
+                className={`${inputClass} disabled:opacity-60`}
               />
               <button
-                onClick={handleVerifyEmail}
-                disabled={emailVerified}
-                className={`shrink-0 px-4 rounded-[10px] text-xs font-medium ${
+                onClick={handleSendCode}
+                disabled={
+                  emailVerified ||
+                  sendingCode ||
+                  !form.email.includes("@") ||
+                  (codeSent && resendRemaining > 0)
+                }
+                className={`shrink-0 px-4 rounded-[10px] text-xs font-medium disabled:opacity-50 ${
                   emailVerified
                     ? "bg-[#e6f4ea] text-[#1f8b3f]"
                     : "bg-[#6F4A2C] text-white"
                 }`}
               >
-                {emailVerified ? "완료" : "인증"}
+                {emailVerified
+                  ? "완료"
+                  : sendingCode
+                  ? "발송 중..."
+                  : codeSent && resendRemaining > 0
+                  ? `재발송 ${resendRemaining}s`
+                  : codeSent
+                  ? "재발송"
+                  : "인증"}
               </button>
             </div>
+
+            {/* 인증코드 입력칸 - 발송 후에만 인라인으로 펼쳐짐 */}
+            {codeSent && !emailVerified && (
+              <div className="mt-2.5">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      value={code}
+                      onChange={(e) => setCode(e.target.value)}
+                      placeholder="인증코드 6자리"
+                      maxLength={6}
+                      inputMode="numeric"
+                      className={inputClass}
+                    />
+                    {validRemaining > 0 && (
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-[#d70015] tabular-nums">
+                        {formatMMSS(validRemaining)}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleVerifyCode}
+                    disabled={verifyingCode || !code.trim() || validRemaining <= 0}
+                    className="shrink-0 px-4 rounded-[10px] text-xs font-medium bg-[#6F4A2C] text-white disabled:opacity-50"
+                  >
+                    {verifyingCode ? "확인 중..." : "확인"}
+                  </button>
+                </div>
+                {validRemaining <= 0 && (
+                  <p className="mt-1 text-xs text-[#d70015]">
+                    인증코드가 만료됐어요. 재발송해주세요
+                  </p>
+                )}
+              </div>
+            )}
+
+            {emailError && (
+              <p className="mt-1 text-xs text-[#d70015]">{emailError}</p>
+            )}
+            {emailVerified && (
+              <p className="mt-1 text-xs text-[#1f8b3f]">
+                이메일 인증이 완료됐어요
+              </p>
+            )}
           </Field>
 
           <Field label="비밀번호">

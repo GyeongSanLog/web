@@ -1,11 +1,42 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 // 촬영 시간(초) — 셔터를 누르면 이 시간만큼 영상이 녹화됩니다.
 const RECORD_SECONDS = 2;
 
+/**
+ * Date를 "로컬 시:분:초 값에 Z(UTC 표시)만 붙인" ISO 문자열로 변환.
+ * (예: 한국 시간대에서 오전 11시32분에 촬영 -> "2026-09-04T11:32:34.753Z")
+ *
+ * 배경: 서버가 capturedAt의 date-time 형식 검증에서 타임존 오프셋
+ * (+09:00 등)이 포함된 문자열을 400으로 거부하는 것이 확인됨.
+ * 반면 Z가 붙은 UTC 형식은 정상 처리되는데, 예전 관찰에 따르면
+ * 서버는 이 문자열의 시:분 숫자를 그대로 슬롯 계산에 사용하고
+ * 있어서(진짜 UTC 변환을 하지 않음), 한국시간 값 그대로에 Z만
+ * 붙여 보내면 슬롯도 올바르게 계산되고 서버 검증도 통과함.
+ *
+ * 즉 이 함수는 "진짜 UTC로 변환"하는 게 아니라, 로컬 시:분:초를
+ * 유지한 채 서버가 받아들이는 형식(Z)으로만 포장하는 임시 처리임.
+ * 서버가 나중에 오프셋을 올바르게 파싱하도록 고쳐지면, 이 함수
+ * 대신 date.toISOString()이나 오프셋 포함 버전으로 되돌리면 됨.
+ */
+function toLocalIsoString(date) {
+  const pad = (n, len = 2) => String(n).padStart(len, "0");
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  const ms = pad(date.getMilliseconds(), 3);
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}Z`;
+}
+
 export default function Camera() {
   const navigate = useNavigate();
+  const { groupId } = useParams();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recorderRef = useRef(null);
@@ -26,9 +57,13 @@ export default function Camera() {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
       try {
+        // 셋로그 클립은 소리가 필요 없어서 audio: false로 아예 마이크를
+        // 켜지 않음. 이러면 브라우저가 마이크 권한도 안 물어보고,
+        // 녹화되는 원본 자체에 오디오 트랙이 없어서 이후 단계에서
+        // 오디오 처리(합성, 뮤트 등)를 신경 쓸 필요가 없어짐.
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facingUser ? "user" : "environment" },
-          audio: true,
+          audio: false,
         });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -75,18 +110,28 @@ export default function Camera() {
     }, 30);
 
     let recorder = null;
+    console.log("[Camera] handleShutter 시작", {
+      hasStream: !!streamRef.current,
+      hasMediaRecorder: typeof MediaRecorder !== "undefined",
+    });
     if (streamRef.current && typeof MediaRecorder !== "undefined") {
       try {
         chunksRef.current = [];
         recorder = new MediaRecorder(streamRef.current);
+        console.log("[Camera] MediaRecorder 생성됨", { state: recorder.state, mimeType: recorder.mimeType });
         recorder.ondataavailable = (e) => {
+          console.log("[Camera] ondataavailable, size:", e.data.size);
           if (e.data.size > 0) chunksRef.current.push(e.data);
         };
         recorderRef.current = recorder;
         recorder.start();
-      } catch {
+        console.log("[Camera] recorder.start() 호출됨, state:", recorder.state);
+      } catch (err) {
+        console.error("[Camera] MediaRecorder 생성/시작 실패:", err);
         recorder = null;
       }
+    } else {
+      console.warn("[Camera] 스트림 또는 MediaRecorder 없음 - 녹화 불가");
     }
 
     setTimeout(() => {
@@ -106,22 +151,41 @@ export default function Camera() {
         }
       }
 
-      const goNext = (videoUrl) => {
+      // 셔터를 누른 시점을 촬영 시각으로 기록.
+      // 업로드 API(capturedAt)가 이 값을 기준으로 시간대(slotIndex)를 계산함.
+      //
+      // 주의: toISOString()은 항상 UTC로 변환하는데, 서버가 이 값을
+      // "그 지역(KST) 시각"으로 오인하고 slotIndex를 계산하는 문제가
+      // 발견됨 (한국시간 11시 촬영 → UTC 2시로 변환되어 전송 → 서버가
+      // 이를 그대로 "2시대"로 slotIndex 계산). 그래서 UTC 대신 타임존
+      // 오프셋을 포함한 로컬 시간 문자열(KST면 +09:00)을 만들어서 보냄.
+      const capturedAt = toLocalIsoString(new Date(startedAt));
+
+      const goNext = (videoUrl, videoBlob) => {
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
         }
-        navigate("/camera/result", { state: { videoUrl, poster } });
+        navigate(`/camera/${groupId}/result`, {
+          state: { videoUrl, videoBlob, poster, capturedAt },
+        });
       };
 
       if (recorder && recorder.state !== "inactive") {
+        console.log("[Camera] recorder.stop() 호출, 현재 chunk 개수:", chunksRef.current.length);
         recorder.onstop = () => {
+          console.log("[Camera] recorder onstop, 최종 chunk 개수:", chunksRef.current.length);
           const blob = new Blob(chunksRef.current, { type: "video/webm" });
-          goNext(URL.createObjectURL(blob));
+          console.log("[Camera] 생성된 blob", { size: blob.size, type: blob.type });
+          goNext(URL.createObjectURL(blob), blob);
         };
         recorder.stop();
       } else {
-        goNext(null);
+        console.warn("[Camera] recorder가 없거나 이미 inactive라 blob 없이 이동", {
+          hasRecorder: !!recorder,
+          state: recorder?.state,
+        });
+        goNext(null, null);
       }
     }, totalMs);
   }
