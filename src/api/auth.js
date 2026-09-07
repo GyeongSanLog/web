@@ -149,3 +149,93 @@ export async function reissueTokenManually() {
   setTokens(data);
   return data;
 }
+
+/**
+ * POST /api/member/kakao/login — 카카오 로그인
+ * 프론트가 받은 카카오 인가 코드로 로그인한다.
+ * 가입 이력이 없으면 자동으로 가입 후 토큰을 발급한다.
+ *
+ * 주의: 아직 카카오 개발자 콘솔에 앱 등록 전이라, authCode를 실제로
+ * 받아올 방법이 없음. 카카오 앱 등록 + JavaScript 키 발급 +
+ * 카카오 JS SDK 연동(Kakao.Auth.authorize 등)이 먼저 필요함.
+ * 이 함수는 authCode를 받아서 서버에 전달하는 부분만 미리 구현해둔 것.
+ *
+ * Request body: { authCode, redirectUrl }
+ *   redirectUrl은 카카오 인가 코드를 받을 때 사용한 redirect_uri와
+ *   정확히 일치해야 함 (예: "http://localhost:5173/oauth/kakao")
+ * Response 200: { accessToken, refreshToken }
+ * Response 400: 인가 코드 또는 redirect_uri 오류
+ * Response 401: 카카오 사용자 정보 조회 실패
+ */
+export async function kakaoLogin({ authCode, redirectUrl }) {
+  const res = await fetch(`${BASE_URL}/api/member/kakao/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authCode, redirectUrl }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 400) {
+      throw new Error("카카오 인증 정보가 올바르지 않아요");
+    }
+    if (res.status === 401) {
+      throw new Error("카카오 사용자 정보를 가져오지 못했어요");
+    }
+    throw new Error(await extractErrorMessage(res, "카카오 로그인에 실패했습니다"));
+  }
+
+  const data = await res.json(); // { accessToken, refreshToken }
+  setTokens(data);
+  return data;
+}
+
+/**
+ * POST /api/member/email/send — 이메일 인증코드 발송
+ * 가입하려는 이메일로 6자리 인증코드를 발송한다.
+ * 코드는 5분간 유효하며 60초 내 재발송은 제한된다.
+ *
+ * Request body: { email }
+ * Response 204: 발송 성공 (바디 없음)
+ * Response 409: 이미 가입된 이메일
+ * Response 429: 재발송 대기 시간 미경과
+ */
+export async function sendEmailCode(email) {
+  const res = await fetch(`${BASE_URL}/api/member/email/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 409) {
+      throw new Error("이미 가입된 이메일이에요");
+    }
+    if (res.status === 429) {
+      throw new Error("잠시 후 다시 시도해주세요 (재발송 대기 시간)");
+    }
+    throw new Error(await extractErrorMessage(res, "인증코드 발송에 실패했습니다"));
+  }
+}
+
+/**
+ * POST /api/member/email/verify — 이메일 인증코드 검증
+ * 발송된 인증코드를 검증한다. 통과하면 30분 안에 해당 이메일로 회원가입할 수 있다.
+ *
+ * Request body: { email, code }
+ * Response 204: 인증 성공 (바디 없음)
+ * Response 400: 인증코드 불일치 또는 만료
+ */
+export async function verifyEmailCode({ email, code }) {
+  const res = await fetch(`${BASE_URL}/api/member/email/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 400) {
+      throw new Error("인증코드가 올바르지 않거나 만료됐어요");
+    }
+    throw new Error(await extractErrorMessage(res, "인증에 실패했습니다"));
+  }
+}

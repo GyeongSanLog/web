@@ -6,7 +6,12 @@
 //   authFetch()를 통해 요청을 보냄
 // ============================================================
 
-export const BASE_URL = "http://43.201.94.243:8080"; // 실제 백엔드 서버 주소
+// export const BASE_URL = "http://43.201.94.243:8080"; // 실제 백엔드 서버 주소
+// 서버 주소는 .env의 VITE_API_BASE_URL로 관리.
+// 없으면 아래 기본값(배포 서버)을 사용한다.
+export const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "https://gyeongsanlog.cloud";
+
 
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";

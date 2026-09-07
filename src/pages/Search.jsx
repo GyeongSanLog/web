@@ -1,45 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchAreaList } from "../api/areas";
+
+// 실제 API에 키워드 검색 파라미터가 없어서(백엔드에 추가 요청 필요),
+// 임시로 전체 목록을 한 번에 받아온 뒤 프론트에서 이름/주소 텍스트로
+// 필터링하는 방식으로 구현함. 관광지 수가 많지 않을 때만 괜찮은 방식이라,
+// 나중에 데이터가 늘어나거나 백엔드 검색 API가 생기면 그걸로 교체 필요.
+const SEARCH_PAGE_SIZE = 200;
 
 export default function Search() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
+  const [allSpots, setAllSpots] = useState([]);
+  const [spotsLoaded, setSpotsLoaded] = useState(false);
   const [results, setResults] = useState([]);
-  const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    setSubmittedQuery(query);
-    setLoading(true);
-    try {
-      const res = await fetchAreaList(query, 1);
-      setResults(res.contents);
-      setMeta(res.meta);
-    } catch (err) {
-      console.error("검색 실패:", err);
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 검색창에 처음 들어오는 시점에 전체 목록을 미리 한 번 받아둠
+  useEffect(() => {
+    fetchAreaList({ page: 0, size: SEARCH_PAGE_SIZE })
+      .then((res) => {
+        setAllSpots(res.content ?? []);
+      })
+      .catch((err) => {
+        if (err.message === "AUTH_EXPIRED") {
+          navigate("/login");
+          return;
+        }
+        console.error("관광지 목록 로드 실패:", err);
+      })
+      .finally(() => setSpotsLoaded(true));
+  }, [navigate]);
 
-  const handleKeywordClick = async (kw) => {
-    setQuery(kw);
-    setSubmittedQuery(kw);
+  function runSearch(keyword) {
+    const trimmed = keyword.trim();
+    if (!trimmed) return;
+
+    setSubmittedQuery(trimmed);
     setLoading(true);
-    try {
-      const res = await fetchAreaList(kw, 1);
-      setResults(res.contents);
-      setMeta(res.meta);
-    } catch (err) {
-      console.error("검색 실패:", err);
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
+
+    // 네트워크 요청은 이미 끝나있으니(위 useEffect), 여기서는
+    // 받아둔 목록을 이름/주소 기준으로 필터링만 함
+    const filtered = allSpots.filter(
+      (spot) =>
+        spot.name?.includes(trimmed) || spot.address?.includes(trimmed)
+    );
+    setResults(filtered);
+    setLoading(false);
+  }
+
+  const handleSearch = () => runSearch(query);
+
+  const handleKeywordClick = (kw) => {
+    setQuery(kw);
+    runSearch(kw);
   };
 
   return (
@@ -62,8 +77,9 @@ export default function Search() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="관광장소 / 키워드로 검색"
-              className="flex-1 bg-transparent outline-none text-sm text-[#1c1c1e] placeholder-[#98989d]"
+              placeholder={spotsLoaded ? "관광장소 / 키워드로 검색" : "목록 불러오는 중..."}
+              disabled={!spotsLoaded}
+              className="flex-1 bg-transparent outline-none text-sm text-[#1c1c1e] placeholder-[#98989d] disabled:opacity-60"
             />
             {query && (
               <button onClick={() => setQuery("")} aria-label="검색어 지우기">
@@ -82,7 +98,8 @@ export default function Search() {
                 <button
                   key={kw}
                   onClick={() => handleKeywordClick(kw)}
-                  className="px-3.5 py-2 rounded-full bg-[#f5f5f7] text-sm text-[#1c1c1e]"
+                  disabled={!spotsLoaded}
+                  className="px-3.5 py-2 rounded-full bg-[#f5f5f7] text-sm text-[#1c1c1e] disabled:opacity-50"
                 >
                   {kw}
                 </button>
@@ -107,7 +124,7 @@ export default function Search() {
         {!loading && submittedQuery && (
           <>
             <p className="text-xs text-[#98989d] mb-3">
-              "{submittedQuery}" 검색 결과 {meta?.totalElements ?? 0}곳
+              "{submittedQuery}" 검색 결과 {results.length}곳
             </p>
 
             {results.length === 0 ? (
@@ -122,8 +139,12 @@ export default function Search() {
                     onClick={() => navigate(`/spots/${spot.id}`)}
                     className="text-left"
                   >
-                    <div className="w-full aspect-square rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] flex items-center justify-center mb-2">
-                      <ImageIcon />
+                    <div className="w-full aspect-square rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] flex items-center justify-center mb-2 overflow-hidden">
+                      {spot.imageUrl ? (
+                        <img src={spot.imageUrl} alt={spot.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon />
+                      )}
                     </div>
                     <p className="text-[13px] font-medium text-[#1c1c1e]">
                       {spot.name}

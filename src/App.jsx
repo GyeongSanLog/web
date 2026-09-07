@@ -6,6 +6,7 @@ import Search from "./pages/Search";
 import SpotDetail from "./pages/SpotDetail";
 import Gallery from "./pages/Gallery";
 import GroupDetail from "./pages/GroupDetail";
+import GroupNew from "./pages/GroupNew";
 import Camera from "./pages/Camera";
 import CameraResult from "./pages/CameraResult";
 import MyPage from "./pages/MyPage";
@@ -52,8 +53,9 @@ export default function App() {
             <Route path="/spots/:id" element={<SpotDetail />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/gallery/:groupId" element={<GroupDetail />} />
-            <Route path="/camera" element={<Camera />} />
-            <Route path="/camera/result" element={<CameraResult />} />
+            <Route path="/gallery/new" element={<GroupNew />} />
+            <Route path="/camera/:groupId" element={<Camera />} />
+            <Route path="/camera/:groupId/result" element={<CameraResult />} />
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/profile" element={<ProfileEdit />} />
             <Route path="/password-reset" element={<PasswordChange />} />
