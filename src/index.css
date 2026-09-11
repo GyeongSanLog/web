@@ -18,3 +18,169 @@
     display: none;
   }
 }
+
+/* ============================================================
+   지도 - 랜덤 여행지 뽑기 연출 (Map.jsx)
+   ------------------------------------------------------------
+   Tailwind 유틸로 표현이 어려운 키프레임만 여기 모아둠.
+   흐름: 핀이 두근두근 흔들리며 이름 릴이 돌아감 → 이름 확정(팝 + 파티클)
+        → 지도의 실제 좌표에 핀이 떨어지고 파장이 퍼짐 → 결과 카드 등장
+   ============================================================ */
+
+@keyframes gs-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes gs-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* 뽑는 중: 핀이 좌우로 흔들리며 떠 있음 */
+@keyframes gs-bob {
+  0%, 100% { transform: translateY(2px) rotate(-7deg); }
+  50%      { transform: translateY(-10px) rotate(7deg); }
+}
+
+/* 뽑는 중: 핀 주위로 퍼지는 파장 */
+@keyframes gs-ring {
+  0%   { transform: scale(0.45); opacity: 0.55; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* 이름 릴(슬롯머신)이 위로 흐름 - 목록을 두 번 이어붙여 무한 루프 */
+@keyframes gs-reel {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* 확정된 이름이 위에서 툭 떨어지며 또렷해짐 */
+@keyframes gs-name-pop {
+  0%   { transform: translateY(-16px) scale(0.92); opacity: 0; filter: blur(5px); }
+  60%  { transform: translateY(3px) scale(1.05);  opacity: 1; filter: blur(0); }
+  100% { transform: translateY(0) scale(1);        opacity: 1; filter: blur(0); }
+}
+
+/* 확정 순간 사방으로 튀는 반짝이 */
+@keyframes gs-burst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.2); opacity: 0; }
+}
+
+/* 확정된 핀이 지도 쪽으로 날아가듯 사라짐 */
+@keyframes gs-launch {
+  0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+  25%  { transform: translateY(-18px) scale(1.12) rotate(-4deg); opacity: 1; }
+  100% { transform: translateY(120px) scale(0.3) rotate(6deg); opacity: 0; }
+}
+
+/* 지도 위 핀이 하늘에서 떨어져 한 번 튕김 */
+@keyframes gs-pin-drop {
+  0%   { transform: translateY(-120px) scale(0.65); opacity: 0; }
+  55%  { transform: translateY(0) scale(1); opacity: 1; }
+  70%  { transform: translateY(-14px) scale(1.02); }
+  85%  { transform: translateY(0) scale(1); }
+  92%  { transform: translateY(-4px); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* 핀이 착지한 자리에서 퍼지는 파장 */
+@keyframes gs-land-ripple {
+  0%   { transform: scale(0.25); opacity: 0; }
+  35%  { opacity: 0.45; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* 결과 카드가 아래에서 올라옴 */
+@keyframes gs-sheet-up {
+  from { transform: translateY(130%); opacity: 0.3; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* 현위치 점의 숨쉬는 파장 */
+@keyframes gs-me-pulse {
+  0%   { transform: scale(0.5); opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@layer utilities {
+  .gs-fade-in  { animation: gs-fade-in 220ms ease-out both; }
+  .gs-bob      { animation: gs-bob 620ms ease-in-out infinite; }
+  .gs-launch   { animation: gs-launch 780ms cubic-bezier(0.55, -0.3, 0.75, 0.4) 320ms both; }
+  .gs-reel     { animation: gs-reel linear infinite; }
+  .gs-name-pop { animation: gs-name-pop 520ms cubic-bezier(0.18, 0.9, 0.3, 1.25) both; }
+  .gs-burst    { animation: gs-burst 700ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .gs-ring     { animation: gs-ring 1500ms ease-out infinite; }
+  .gs-sheet-up { animation: gs-sheet-up 420ms cubic-bezier(0.2, 0.9, 0.3, 1.08) both; }
+
+  /* 오버레이가 결과 확정 후 잠시 머물렀다 사라짐 */
+  .gs-overlay-out { animation: gs-fade-out 340ms ease-in 760ms both; }
+}
+
+/* 지도 위에 얹는 커스텀 오버레이(핀 / 현위치) - React 밖에서 innerHTML로
+   만들기 때문에 Tailwind 클래스 대신 여기서 직접 스타일을 준다 */
+.gs-overlay-root { position: relative; width: 0; height: 0; }
+
+.gs-pin-anchor {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+.gs-pin-drop { animation: gs-pin-drop 900ms cubic-bezier(0.3, 0.8, 0.4, 1) both; }
+.gs-pin-label {
+  margin-bottom: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1c1c1e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.gs-land-ripple {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 88px;
+  height: 88px;
+  margin-left: -44px;
+  margin-top: -44px;
+  border-radius: 999px;
+  background: rgba(111, 74, 44, 0.28);
+  animation: gs-land-ripple 1400ms ease-out 500ms 2 both;
+}
+
+.gs-me-dot {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #2f7cf6;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.gs-me-wave {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(47, 124, 246, 0.35);
+  animation: gs-me-pulse 2000ms ease-out infinite;
+}
+
+/* 모션을 줄이도록 설정한 사용자에게는 반복 애니메이션을 멈춘다 */
+@media (prefers-reduced-motion: reduce) {
+  .gs-bob, .gs-ring, .gs-reel, .gs-me-wave, .gs-land-ripple {
+    animation: none !important;
+  }
+  .gs-launch, .gs-pin-drop, .gs-sheet-up, .gs-name-pop, .gs-burst {
+    animation-duration: 1ms !important;
+  }
+}
