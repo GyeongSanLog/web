@@ -1,3 +1,9 @@
+/* 브랜드 서체(고운바탕) - 앱 전체가 아니라 .font-brand 를 붙인 곳(헤더 워드마크,
+   로그인 타이틀, 섹션 제목)에만 좁게 적용한다.
+   주의: 이 @import 는 반드시 `@import "tailwindcss"` 보다 위에 있어야 한다.
+   (Vite/Lightning CSS 는 @import 가 다른 규칙 뒤에 오면 빌드 에러를 낸다) */
+@import url("https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap");
+
 @import "tailwindcss";
 
 /* Tailwind Preflight가 버튼 커서를 기본값(화살표)으로 되돌리는 걸 다시 pointer로 복구 */
@@ -6,4 +12,308 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* 가로 스크롤 카드 목록에서 스크롤바 숨기기 (홈 화면 등에서 사용) */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ============================================================
+   지도 - 랜덤 여행지 뽑기 연출 (Map.jsx)
+   ------------------------------------------------------------
+   Tailwind 유틸로 표현이 어려운 키프레임만 여기 모아둠.
+   흐름: 핀이 두근두근 흔들리며 이름 릴이 돌아감 → 이름 확정(팝 + 파티클)
+        → 지도의 실제 좌표에 핀이 떨어지고 파장이 퍼짐 → 결과 카드 등장
+   ============================================================ */
+
+@keyframes gs-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes gs-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* 뽑는 중: 핀이 좌우로 흔들리며 떠 있음 */
+@keyframes gs-bob {
+  0%, 100% { transform: translateY(2px) rotate(-7deg); }
+  50%      { transform: translateY(-10px) rotate(7deg); }
+}
+
+/* 뽑는 중: 핀 주위로 퍼지는 파장 */
+@keyframes gs-ring {
+  0%   { transform: scale(0.45); opacity: 0.55; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+/* 이름 릴(슬롯머신)이 위로 흐름 - 목록을 두 번 이어붙여 무한 루프 */
+@keyframes gs-reel {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* 확정된 이름이 위에서 툭 떨어지며 또렷해짐 */
+@keyframes gs-name-pop {
+  0%   { transform: translateY(-16px) scale(0.92); opacity: 0; filter: blur(5px); }
+  60%  { transform: translateY(3px) scale(1.05);  opacity: 1; filter: blur(0); }
+  100% { transform: translateY(0) scale(1);        opacity: 1; filter: blur(0); }
+}
+
+/* 확정 순간 사방으로 튀는 반짝이 */
+@keyframes gs-burst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.2); opacity: 0; }
+}
+
+/* 확정된 핀이 지도 쪽으로 날아가듯 사라짐 */
+@keyframes gs-launch {
+  0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+  25%  { transform: translateY(-18px) scale(1.12) rotate(-4deg); opacity: 1; }
+  100% { transform: translateY(120px) scale(0.3) rotate(6deg); opacity: 0; }
+}
+
+/* 지도 위 핀이 하늘에서 떨어져 한 번 튕김 */
+@keyframes gs-pin-drop {
+  0%   { transform: translateY(-120px) scale(0.65); opacity: 0; }
+  55%  { transform: translateY(0) scale(1); opacity: 1; }
+  70%  { transform: translateY(-14px) scale(1.02); }
+  85%  { transform: translateY(0) scale(1); }
+  92%  { transform: translateY(-4px); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* 핀이 착지한 자리에서 퍼지는 파장 */
+@keyframes gs-land-ripple {
+  0%   { transform: scale(0.25); opacity: 0; }
+  35%  { opacity: 0.45; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* 결과 카드가 아래에서 올라옴 */
+@keyframes gs-sheet-up {
+  from { transform: translateY(130%); opacity: 0.3; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* 현위치 점의 숨쉬는 파장 */
+@keyframes gs-me-pulse {
+  0%   { transform: scale(0.5); opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@layer utilities {
+  .gs-fade-in  { animation: gs-fade-in 220ms ease-out both; }
+  .gs-bob      { animation: gs-bob 620ms ease-in-out infinite; }
+  .gs-launch   { animation: gs-launch 780ms cubic-bezier(0.55, -0.3, 0.75, 0.4) 320ms both; }
+  .gs-reel     { animation: gs-reel linear infinite; }
+  .gs-name-pop { animation: gs-name-pop 520ms cubic-bezier(0.18, 0.9, 0.3, 1.25) both; }
+  .gs-burst    { animation: gs-burst 700ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  .gs-ring     { animation: gs-ring 1500ms ease-out infinite; }
+  .gs-sheet-up { animation: gs-sheet-up 420ms cubic-bezier(0.2, 0.9, 0.3, 1.08) both; }
+
+  /* 오버레이가 결과 확정 후 잠시 머물렀다 사라짐 */
+  .gs-overlay-out { animation: gs-fade-out 340ms ease-in 760ms both; }
+}
+
+/* 지도 위에 얹는 커스텀 오버레이(핀 / 현위치) - React 밖에서 innerHTML로
+   만들기 때문에 Tailwind 클래스 대신 여기서 직접 스타일을 준다 */
+.gs-overlay-root { position: relative; width: 0; height: 0; }
+
+.gs-pin-anchor {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+.gs-pin-drop { animation: gs-pin-drop 900ms cubic-bezier(0.3, 0.8, 0.4, 1) both; }
+.gs-pin-label {
+  margin-bottom: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #FFFCF6;
+  color: #2A2420;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.gs-land-ripple {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 88px;
+  height: 88px;
+  margin-left: -44px;
+  margin-top: -44px;
+  border-radius: 999px;
+  background: rgba(139, 74, 38, 0.28);
+  animation: gs-land-ripple 1400ms ease-out 500ms 2 both;
+}
+
+.gs-me-dot {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #2f7cf6;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.gs-me-wave {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(47, 124, 246, 0.35);
+  animation: gs-me-pulse 2000ms ease-out infinite;
+}
+
+/* 모션을 줄이도록 설정한 사용자에게는 반복 애니메이션을 멈춘다 */
+@media (prefers-reduced-motion: reduce) {
+  .gs-bob, .gs-ring, .gs-reel, .gs-me-wave, .gs-land-ripple {
+    animation: none !important;
+  }
+  .gs-launch, .gs-pin-drop, .gs-sheet-up, .gs-name-pop, .gs-burst {
+    animation-duration: 1ms !important;
+  }
+}
+
+/* ============================================================
+   공통 모션 / 자연 질감 유틸 (앱 전역)
+   ------------------------------------------------------------
+   위쪽 gs-* 키프레임이 "지도 뽑기 연출" 전용이라면, 아래는 모든
+   화면에서 재사용하는 기본 사용감 세트다.
+     · 진입    : gs-rise / gs-rise-sm / gs-scale-in / gs-stagger
+     · 로딩    : gs-skeleton (회색 깜빡임 대신 따뜻한 결이 흐름)
+     · 상호작용: gs-press (누르면 살짝 눌림) / gs-tab-pop
+     · 분위기  : gs-float / gs-sway / gs-sun (해·잎사귀 장식용)
+   ============================================================ */
+
+@keyframes gs-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gs-rise-sm {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gs-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* 스켈레톤: 종이 위로 빛이 훑고 지나가는 느낌 */
+@keyframes gs-shimmer {
+  from { background-position: 220% 0; }
+  to   { background-position: -120% 0; }
+}
+
+/* 잎사귀·아이콘이 천천히 떠 있는 느낌 */
+@keyframes gs-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+/* 바람에 흔들리는 느낌 */
+@keyframes gs-sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50%      { transform: rotate(5deg); }
+}
+/* 해가 아주 느리게 도는 느낌 (로고/장식용) */
+@keyframes gs-sun {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 하단 탭을 눌렀을 때 아이콘이 통 튀어오름 */
+@keyframes gs-tab-pop {
+  0%   { transform: translateY(0) scale(1); }
+  42%  { transform: translateY(-3.5px) scale(1.16); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* 섹션 제목 밑 강조선이 좌→우로 그어짐 */
+@keyframes gs-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@layer utilities {
+  .gs-rise      { animation: gs-rise 480ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+  .gs-rise-sm   { animation: gs-rise-sm 380ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+  .gs-scale-in  { animation: gs-scale-in 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+  .gs-float     { animation: gs-float 4200ms ease-in-out infinite; }
+  .gs-sway      { animation: gs-sway 3400ms ease-in-out infinite; }
+  .gs-sun       { animation: gs-sun 26s linear infinite; transform-origin: center; }
+  .gs-tab-pop   { animation: gs-tab-pop 440ms cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+  .gs-draw      { animation: gs-draw 520ms cubic-bezier(0.2, 0.8, 0.25, 1) both; transform-origin: left; }
+
+  /* 컨테이너에 붙이면 직계 자식들이 차례로 올라온다 (목록/그리드용) */
+  .gs-stagger > * { animation: gs-rise-sm 420ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+  .gs-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+  .gs-stagger > *:nth-child(2)  { animation-delay: 45ms; }
+  .gs-stagger > *:nth-child(3)  { animation-delay: 90ms; }
+  .gs-stagger > *:nth-child(4)  { animation-delay: 135ms; }
+  .gs-stagger > *:nth-child(5)  { animation-delay: 180ms; }
+  .gs-stagger > *:nth-child(6)  { animation-delay: 225ms; }
+  .gs-stagger > *:nth-child(7)  { animation-delay: 270ms; }
+  .gs-stagger > *:nth-child(8)  { animation-delay: 315ms; }
+  .gs-stagger > *:nth-child(9)  { animation-delay: 360ms; }
+  .gs-stagger > *:nth-child(n + 10) { animation-delay: 400ms; }
+
+  /* 누르면 살짝 들어가는 촉감 - 버튼/카드 어디에나 */
+  .gs-press {
+    transition: transform 150ms cubic-bezier(0.2, 0.8, 0.3, 1),
+                box-shadow 150ms ease,
+                background-color 150ms ease,
+                border-color 150ms ease;
+  }
+  .gs-press:active:not(:disabled) { transform: scale(0.972); }
+
+  .font-brand { font-family: "Gowun Batang", "Nanum Myeongjo", serif; }
+
+  /* 한지 결 - 아주 옅은 얼룩 두 겹. 배경색 위에 얹어 쓴다 */
+  .gs-paper {
+    background-image:
+      radial-gradient(ellipse 60% 40% at 12% 8%,  rgba(139, 74, 38, 0.045), transparent 60%),
+      radial-gradient(ellipse 50% 45% at 88% 22%, rgba(75, 107, 78, 0.045), transparent 62%),
+      radial-gradient(ellipse 70% 35% at 50% 100%, rgba(232, 183, 105, 0.06), transparent 65%);
+  }
+}
+
+/* 회색 깜빡임(animate-pulse) 대신 쓰는 따뜻한 스켈레톤 */
+.gs-skeleton {
+  background-color: #F4EFE6;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.75) 45%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: gs-shimmer 1500ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-float, .gs-sway, .gs-sun, .gs-skeleton {
+    animation: none !important;
+  }
+  .gs-rise, .gs-rise-sm, .gs-scale-in, .gs-tab-pop, .gs-draw, .gs-stagger > * {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+  .gs-press:active:not(:disabled) { transform: none; }
 }
