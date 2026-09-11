@@ -13,6 +13,7 @@ import MyPage from "./pages/MyPage";
 import ProfileEdit from "./pages/ProfileEdit";
 import PasswordChange from "./pages/PasswordChange";
 import AccountDelete from "./pages/AccountDelete";
+import OauthKakao from "./pages/OauthKakao";
 import EmptyStatePage, {
   BellIcon,
   ChatIcon,
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="/profile" element={<ProfileEdit />} />
             <Route path="/password-reset" element={<PasswordChange />} />
             <Route path="/account/delete" element={<AccountDelete />} />
+            <Route path="/oauth/kakao" element={<OauthKakao />} />
             <Route
               path="/favorites"
               element={

@@ -108,16 +108,7 @@ export default function Gallery() {
               ) : null}
 
               <button
-                onClick={() => {
-                  if (ongoing) {
-                    navigate(`/camera/${ongoing.id}`);
-                  } else {
-                    // 진행중인 그룹이 없으면 BottomNav의 +버튼과 동일하게
-                    // 그룹 생성 여부를 먼저 물어봄 (groupId 없이 바로 /camera로
-                    // 보내면 라우트가 안 맞아 빈 화면이 뜨는 버그가 있었음)
-                    setShowNoGroupModal(true);
-                  }
-                }}
+                onClick={() => navigate("/gallery/new")}
                 className="w-[130px] h-[130px] rounded-2xl bg-[#f5f5f7] border border-dashed border-[#c7c7cc] flex flex-col items-center justify-center gap-1.5 shrink-0"
               >
                 <PlusIcon />
@@ -207,7 +198,14 @@ export default function Gallery() {
         </div>
       )}
 
-      {/* 진행중인 여행이 없을 때: 새 그룹 생성 확인 모달 (BottomNav의 +버튼과 동일한 흐름) */}
+      {/*
+        진행중인 여행이 없을 때: 새 그룹 생성 확인 모달 (BottomNav의 +버튼과 동일한 흐름)
+        현재 이 화면의 "새 여행 그룹 만들기" 버튼은 항상 /gallery/new로 바로
+        이동하도록 바뀌어서(더 이상 촬영 화면으로 가지 않음) 이 모달을 띄우는
+        지점이 없어짐. BottomNav.jsx의 +버튼 로직은 그대로 이 패턴을 쓰고
+        있으니, 여기서도 다시 필요해지면 아래 주석을 풀고 showNoGroupModal을
+        true로 설정하는 트리거만 추가하면 됨.
+
       {showNoGroupModal && (
         <div className="absolute inset-0 z-20 flex items-center justify-center px-8">
           <div
@@ -241,6 +239,7 @@ export default function Gallery() {
           </div>
         </div>
       )}
+      */}
 
       <BottomNav />
     </div>

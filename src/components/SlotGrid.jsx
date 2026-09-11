@@ -255,6 +255,17 @@ function MemberGrid({ members, clipsByUser, onOpenClip, myId, canRecordNow, onRe
   const total = members.length;
 
   if (total <= 4) {
+    // 비율(aspect-*) 대신 뷰포트 높이 기준으로 칸 높이를 계산해서,
+    // 인원수와 무관하게 4칸이 스크롤 없이 한 화면에 들어오도록 함.
+    // 46vh를 그리드 전체가 쓸 수 있는 대략적인 영역으로 보고
+    // (헤더, 초대코드 배너, 하단 컨트롤·네비바를 뺀 나머지 감안),
+    // 인원수로 나눠 칸 하나의 높이를 정함. 최소 72px는 보장해서
+    // 인원이 많아도 너무 납작해지지 않게 함.
+    //
+    // Tailwind는 동적으로 조합된 클래스 문자열(h-[...vh])을 빌드 시
+    // 인식하지 못하므로, 여기서는 style로 직접 높이를 지정함.
+    const cellHeight = `max(72px, ${(46 / total).toFixed(1)}vh)`;
+
     return (
       <div className="flex flex-col gap-1.5">
         {members.map((member) => (
@@ -263,7 +274,7 @@ function MemberGrid({ members, clipsByUser, onOpenClip, myId, canRecordNow, onRe
             member={member}
             clip={clipsByUser.get(member.userId)}
             onOpenClip={onOpenClip}
-            aspectClass="aspect-video" // 16:9, 가로로 긴 형태
+            style={{ height: cellHeight }}
             isMe={member.userId === myId}
             canRecordNow={canRecordNow}
             onRecord={onRecord}
@@ -322,13 +333,14 @@ function MemberGrid({ members, clipsByUser, onOpenClip, myId, canRecordNow, onRe
  *   프로필/닉네임을 살짝 위로 올리고 그 아래에 촬영하러 가는 + 버튼을 보여줌
  *   (과거 시간대는 지금 찍어도 소급되지 않으므로 + 버튼을 보여주지 않음)
  */
-function MemberCell({ member, clip, onOpenClip, aspectClass, isMe, canRecordNow, onRecord }) {
+function MemberCell({ member, clip, onOpenClip, aspectClass, style, isMe, canRecordNow, onRecord }) {
   if (!clip) {
     const showRecordButton = isMe && canRecordNow;
 
     return (
       <div
-        className={`${aspectClass} rounded-lg bg-[#f5f5f7] flex flex-col items-center justify-center gap-1`}
+        className={`${aspectClass ?? ""} rounded-lg bg-[#f5f5f7] flex flex-col items-center justify-center gap-1`}
+        style={style}
       >
         <div className={`flex flex-col items-center gap-1.5 ${showRecordButton ? "-translate-y-1.5" : ""}`}>
           <div className="w-9 h-9 rounded-full bg-[#e5e5ea] flex items-center justify-center overflow-hidden shrink-0">
@@ -363,7 +375,8 @@ function MemberCell({ member, clip, onOpenClip, aspectClass, isMe, canRecordNow,
   return (
     <button
       onClick={() => onOpenClip(clip)}
-      className={`${aspectClass} w-full rounded-lg relative overflow-hidden bg-[#1c1c1e]`}
+      className={`${aspectClass ?? ""} w-full rounded-lg relative overflow-hidden bg-[#1c1c1e]`}
+      style={style}
     >
       {clip.videoUrl && (
         <video

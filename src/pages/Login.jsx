@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import { login } from "../api/auth";
+import { startKakaoLogin } from "../utils/kakao";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
 
   const handleLogin = async () => {
     setError("");
@@ -30,6 +32,21 @@ export default function Login() {
       setSubmitting(false);
     }
   };
+
+  async function handleKakaoLogin() {
+    if (kakaoLoading) return;
+    setError("");
+    setKakaoLoading(true);
+    try {
+      // 성공하면 카카오 로그인 페이지로 리다이렉트되면서 이 화면을 벗어남.
+      // 실패(SDK 로드 실패, 키 누락 등)하면 여기서 에러를 잡아서 보여줌.
+      await startKakaoLogin();
+    } catch (err) {
+      console.error("카카오 로그인 시작 실패:", err);
+      setError(err.message || "카카오 로그인을 시작할 수 없어요");
+      setKakaoLoading(false);
+    }
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-white flex items-center justify-center px-6 py-10 relative">
@@ -96,13 +113,14 @@ export default function Login() {
           <div className="flex-1 h-px bg-[#e5e5ea]" />
         </div>
 
-        {/* TODO: 카카오/구글 OAuth API 명세 받으면 연동 */}
+        {/* TODO: 구글 OAuth API 명세 받으면 연동 (카카오는 연동 완료) */}
         <div className="flex flex-col gap-3 mb-6">
           <button
-            onClick={() => console.log("카카오 로그인 TODO - API 명세 대기중")}
-            className="h-12 rounded-xl bg-[#FEE500] text-[#3C1E1E] text-sm font-medium hover:brightness-95 transition-all"
+            onClick={handleKakaoLogin}
+            disabled={kakaoLoading}
+            className="h-12 rounded-xl bg-[#FEE500] text-[#3C1E1E] text-sm font-medium hover:brightness-95 transition-all disabled:opacity-60"
           >
-            카카오로 계속하기
+            {kakaoLoading ? "이동 중..." : "카카오로 계속하기"}
           </button>
           <button
             onClick={() => console.log("구글 로그인 TODO - API 명세 대기중")}

@@ -10,7 +10,6 @@ export default function GroupNew() {
   const [name, setName] = useState("");
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
-  const [maxMembers, setMaxMembers] = useState(""); // 화면 입력용. 이번 API엔 없어서 서버로는 안 보냄
   const [imageFile, setImageFile] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
 
@@ -100,7 +99,7 @@ export default function GroupNew() {
         </div>
 
         {/* 시작일 / 종료일 */}
-        <div className="flex gap-3 mb-5">
+        <div className="flex gap-3 mb-2">
           <div className="flex-1">
             <label className="text-sm text-[#1c1c1e] font-medium block mb-2">시작일</label>
             <input
@@ -120,25 +119,9 @@ export default function GroupNew() {
             />
           </div>
         </div>
-
-        {/* 최대인원 */}
-        <div className="mb-5">
-          <label className="text-sm text-[#1c1c1e] font-medium block mb-2">
-            최대 인원 <span className="text-[#98989d] font-normal">(선택)</span>
-          </label>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            value={maxMembers}
-            onChange={(e) => setMaxMembers(e.target.value)}
-            placeholder="예: 4"
-            className="w-full h-12 px-4 rounded-xl bg-[#f5f5f7] text-[15px] text-[#1c1c1e] placeholder:text-[#98989d] outline-none focus:ring-2 focus:ring-[#6F4A2C]"
-          />
-          <p className="text-xs text-[#98989d] mt-1.5">
-            초대코드는 그룹 생성 후 자동으로 만들어져요
-          </p>
-        </div>
+        <p className="text-xs text-[#98989d] mb-6">
+          초대코드는 그룹 생성 후 자동으로 만들어져요 (최대 10명까지 참여 가능)
+        </p>
 
         {error && (
           <p className="text-sm text-[#d70015] mb-4">{error}</p>
