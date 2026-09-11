@@ -143,21 +143,21 @@ export default function CameraResult() {
   return (
     <div className="h-full flex flex-col bg-white relative">
       {/* 헤더 */}
-      <div className="shrink-0 pt-10 px-5 pb-3 flex items-center justify-between border-b border-[#f0f0f2]">
+      <div className="shrink-0 pt-10 px-5 pb-3 flex items-center justify-between border-b border-[#EFE7D9]">
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full bg-[#F4EFE6] flex items-center justify-center shrink-0"
             aria-label="뒤로가기"
           >
             <ArrowLeftIcon />
           </button>
-          <p className="text-[15px] font-medium text-[#1c1c1e]">영상 확인</p>
+          <p className="text-[15px] font-medium text-[#2A2420]">영상 확인</p>
         </div>
         {/* 다시 찍기 */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-[13px] text-[#6F4A2C] font-medium"
+          className="flex items-center gap-1 text-[13px] text-[#8B4A26] font-medium"
         >
           <RetakeIcon />
           다시 찍기
@@ -167,7 +167,7 @@ export default function CameraResult() {
       {/* 스크롤 콘텐츠 */}
       <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6">
         {/* 영상 미리보기 */}
-        <div className="relative rounded-2xl overflow-hidden bg-[#1c1c1e] aspect-[3/4] mb-6">
+        <div className="relative rounded-2xl overflow-hidden bg-[#2A2420] aspect-[3/4] mb-6">
           {videoUrl ? (
             <video
               ref={videoRef}
@@ -223,36 +223,36 @@ export default function CameraResult() {
 
         {/* 고정자막 입력 */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-base font-medium text-[#1c1c1e]">고정자막</p>
-          <span className="text-[11px] text-[#98989d]">{caption.length}/40</span>
+          <p className="text-base font-medium text-[#2A2420]">고정자막</p>
+          <span className="text-[11px] text-[#8C8274]">{caption.length}/40</span>
         </div>
         <input
           value={caption}
           maxLength={40}
           onChange={(e) => setCaption(e.target.value)}
           placeholder="영상에 남길 짧은 한마디 (선택)"
-          className="w-full h-11 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-sm text-[#1c1c1e] placeholder:text-[#b0b0b5] outline-none focus:border-[#6F4A2C]"
+          className="w-full h-11 rounded-xl bg-[#F4EFE6] border border-[#E6DDCD] px-3.5 text-sm text-[#2A2420] placeholder:text-[#A99C89] outline-none focus:border-[#8B4A26]"
         />
-        <p className="text-[11px] text-[#98989d] mt-1.5 mb-7">
+        <p className="text-[11px] text-[#8C8274] mt-1.5 mb-7">
           촬영 시간({timeLabel})과 자막이 영상 정중앙에 함께 저장돼요
         </p>
 
         {/* 사람 선택 */}
-        <p className="text-base font-medium text-[#1c1c1e] mb-1">
+        <p className="text-base font-medium text-[#2A2420] mb-1">
           누구에게 편지를 남길까요?
         </p>
-        <p className="text-xs text-[#98989d] mb-3.5">
+        <p className="text-xs text-[#8C8274] mb-3.5">
           편지는 여행이 끝난 뒤에 받는 사람만 볼 수 있어요
         </p>
 
         {loadingMembers ? (
           <div className="flex gap-3 mb-7">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="w-14 h-14 rounded-full bg-[#f5f5f7] animate-pulse shrink-0" />
+              <div key={i} className="w-14 h-14 rounded-full gs-skeleton shrink-0" />
             ))}
           </div>
         ) : members.length === 0 ? (
-          <p className="text-xs text-[#98989d] mb-7">
+          <p className="text-xs text-[#8C8274] mb-7">
             함께 여행 중인 멤버가 없어요
           </p>
         ) : (
@@ -268,8 +268,8 @@ export default function CameraResult() {
                   <span
                     className={`w-14 h-14 rounded-full flex items-center justify-center overflow-hidden text-base font-medium transition-all ${
                       active
-                        ? "bg-[#6F4A2C] text-white ring-2 ring-[#6F4A2C] ring-offset-2"
-                        : "bg-[#f3ece4] text-[#6F4A2C]"
+                        ? "bg-[#8B4A26] text-white ring-2 ring-[#8B4A26] ring-offset-2"
+                        : "bg-[#F6ECDD] text-[#8B4A26]"
                     }`}
                   >
                     {m.profileImageUrl ? (
@@ -280,7 +280,7 @@ export default function CameraResult() {
                   </span>
                   <span
                     className={`text-[11px] ${
-                      active ? "text-[#6F4A2C] font-medium" : "text-[#98989d]"
+                      active ? "text-[#8B4A26] font-medium" : "text-[#8C8274]"
                     }`}
                   >
                     {m.nickname}
@@ -293,8 +293,8 @@ export default function CameraResult() {
 
         {/* 편지 입력 */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-base font-medium text-[#1c1c1e]">편지 남기기</p>
-          <span className="text-[11px] text-[#98989d]">
+          <p className="text-base font-medium text-[#2A2420]">편지 남기기</p>
+          <span className="text-[11px] text-[#8C8274]">
             {letter.length}/200
           </span>
         </div>
@@ -308,10 +308,10 @@ export default function CameraResult() {
               : "받을 사람을 먼저 선택해주세요"
           }
           disabled={!selectedId}
-          className="w-full h-32 rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] p-4 text-sm text-[#1c1c1e] placeholder:text-[#b0b0b5] resize-none outline-none focus:border-[#6F4A2C] disabled:opacity-60"
+          className="w-full h-32 rounded-2xl bg-[#F4EFE6] border border-[#E6DDCD] p-4 text-sm text-[#2A2420] placeholder:text-[#A99C89] resize-none outline-none focus:border-[#8B4A26] disabled:opacity-60"
         />
         {selectedId && !letter.trim() && (
-          <p className="text-[11px] text-[#98989d] mt-1.5">
+          <p className="text-[11px] text-[#8C8274] mt-1.5">
             편지를 남기려면 내용을 함께 입력해주세요
           </p>
         )}
@@ -320,11 +320,11 @@ export default function CameraResult() {
       </div>
 
       {/* 하단 저장 버튼 */}
-      <div className="shrink-0 px-5 pt-3 pb-6 border-t border-[#f0f0f2] bg-white">
+      <div className="shrink-0 px-5 pt-3 pb-6 border-t border-[#EFE7D9] bg-white">
         <button
           onClick={handleSave}
           disabled={uploading}
-          className="w-full h-12 rounded-2xl bg-[#6F4A2C] text-white text-sm font-medium disabled:opacity-35 disabled:cursor-not-allowed"
+          className="w-full h-12 rounded-2xl bg-[#8B4A26] text-white text-sm font-medium disabled:opacity-35 disabled:cursor-not-allowed gs-press"
         >
           {composing
             ? "영상 만드는 중..."
@@ -336,12 +336,12 @@ export default function CameraResult() {
 
       {/* 업로드 완료 */}
       {uploadDone && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/25">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#2A1A0C]/30">
           <div className="flex flex-col items-center gap-2.5 rounded-2xl bg-white px-8 py-6 shadow-xl">
-            <div className="w-12 h-12 rounded-full bg-[#f3ece4] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-[#F6ECDD] flex items-center justify-center">
               <CheckIcon />
             </div>
-            <p className="text-sm font-medium text-[#1c1c1e]">업로드 완료</p>
+            <p className="text-sm font-medium text-[#2A2420]">업로드 완료</p>
           </div>
         </div>
       )}
@@ -354,7 +354,7 @@ export default function CameraResult() {
 function ArrowLeftIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <path d="M15 19l-7-7 7-7" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 19l-7-7 7-7" stroke="#2A2420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -379,8 +379,8 @@ function PlaceholderPlay() {
 function RetakeIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <path d="M4 12a8 8 0 1 1 2.3 5.6" stroke="#6F4A2C" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M4 20v-4h4" stroke="#6F4A2C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 12a8 8 0 1 1 2.3 5.6" stroke="#8B4A26" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 20v-4h4" stroke="#8B4A26" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -388,7 +388,7 @@ function RetakeIcon() {
 function CheckIcon() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-      <path d="M5 12.5l4.5 4.5L19 7.5" stroke="#6F4A2C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 12.5l4.5 4.5L19 7.5" stroke="#8B4A26" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -14,11 +14,8 @@ import ProfileEdit from "./pages/ProfileEdit";
 import PasswordChange from "./pages/PasswordChange";
 import AccountDelete from "./pages/AccountDelete";
 import OauthKakao from "./pages/OauthKakao";
-import EmptyStatePage, {
-  BellIcon,
-  ChatIcon,
-  HeartOutlineIcon,
-} from "./pages/EmptyStatePage";
+import EmptyStatePage, { BellIcon, ChatIcon } from "./pages/EmptyStatePage";
+import Favorites from "./pages/Favorites";
 import Map from "./pages/Map";
 // import SetlogViewer from "./pages/SetlogViewer";
 // ↑ 분할화면 뷰어는 보류 상태. 촬영 흐름은 당분간 팀원 버전(Camera → CameraResult,
@@ -32,8 +29,8 @@ import Map from "./pages/Map";
 // 그래야 하단 네비바가 스크롤과 무관하게 고정됩니다.
 function PhoneFrame({ children }) {
   return (
-    <div className="h-screen w-full bg-[#e5e5ea] flex items-center justify-center overflow-hidden">
-      <div className="w-full max-w-[430px] h-screen bg-white sm:h-[92vh] sm:my-4 sm:rounded-[2.5rem] sm:shadow-2xl sm:shadow-black/20 overflow-hidden relative flex flex-col">
+    <div className="h-screen w-full bg-gradient-to-b from-[#DBE3D5] via-[#E9E0D0] to-[#E0D4C0] gs-paper flex items-center justify-center overflow-hidden">
+      <div className="w-full max-w-[430px] h-screen bg-[#FDFAF4] sm:h-[92vh] sm:my-4 sm:rounded-[2.5rem] sm:shadow-2xl sm:shadow-[#4B3A28]/25 overflow-hidden relative flex flex-col">
         {children}
       </div>
     </div>
@@ -62,19 +59,7 @@ export default function App() {
             <Route path="/password-reset" element={<PasswordChange />} />
             <Route path="/account/delete" element={<AccountDelete />} />
             <Route path="/oauth/kakao" element={<OauthKakao />} />
-            <Route
-              path="/favorites"
-              element={
-                <EmptyStatePage
-                  title="찜 목록"
-                  icon={HeartOutlineIcon}
-                  description={{
-                    headline: "아직 찜한 장소가 없어요",
-                    body: "마음에 드는 장소를 찜하면\n이곳에서 모아볼 수 있어요",
-                  }}
-                />
-              }
-            />
+            <Route path="/favorites" element={<Favorites />} />
             <Route
               path="/support/contact"
               element={

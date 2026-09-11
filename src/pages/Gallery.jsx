@@ -2,7 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import AppHeader from "../components/AppHeader";
+import SectionTitle, { LeafMark } from "../components/SectionTitle";
 import { fetchGallery, joinGroupByInviteCode } from "../api/groups";
+
+/**
+ * 지난 여행 타일에 아직 대표 사진이 없을 때 쓰는 배경.
+ * 전부 같은 회색이라 갤러리가 텅 비어 보이던 걸, 계절색을 번갈아 깔아
+ * "기록이 쌓여 있는" 느낌으로 바꿨다.
+ */
+const TILE_SCENES = [
+  "linear-gradient(150deg, #DCE7D6, #9DB894)",
+  "linear-gradient(150deg, #F4E3C6, #D8B681)",
+  "linear-gradient(150deg, #F1DDD5, #CDA08C)",
+  "linear-gradient(150deg, #DBE7EA, #9BB7BF)",
+];
 
 export default function Gallery() {
   const navigate = useNavigate();
@@ -66,36 +79,53 @@ export default function Gallery() {
   const groupedPast = groupByMonth(past);
 
   return (
-    <div className="h-full flex flex-col relative">
+    <div className="h-full flex flex-col relative bg-[#FDFAF4]">
       <AppHeader />
 
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-28">
 
-        <div className="flex items-center justify-between mb-5">
-          <p className="text-lg font-medium text-[#1c1c1e]">갤러리</p>
-          <button
-            onClick={() => {
-              setJoinError("");
-              setShowJoinModal(true);
-            }}
-            className="text-xs text-[#6F4A2C] font-medium"
-          >
-            초대코드로 참여하기
-          </button>
-        </div>
+        <SectionTitle
+          className="mb-5"
+          tone="#4B6B4E"
+          action={
+            <button
+              onClick={() => {
+                setJoinError("");
+                setShowJoinModal(true);
+              }}
+              className="text-xs text-[#8B4A26] font-medium rounded-full bg-[#F6ECDD] border border-[#EBDCC4] px-3 py-1.5 gs-press"
+            >
+              초대코드로 참여하기
+            </button>
+          }
+        >
+          갤러리
+        </SectionTitle>
 
         {loading ? (
           <GallerySkeleton />
         ) : (
           <>
-            <p className="text-xs text-[#98989d] mb-2.5">진행중인 log</p>
-            <div className="flex gap-2.5 mb-7">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B04A46] animate-pulse" />
+              <p className="text-xs text-[#6B6156] font-medium">진행중인 log</p>
+            </div>
+            <div className="flex gap-2.5 mb-7 gs-stagger">
               {ongoing ? (
                 <button
                   onClick={() => navigate(`/gallery/${ongoing.id}`)}
-                  className="w-[130px] h-[130px] rounded-2xl bg-[#1c1c1e] border-[1.5px] border-[#6F4A2C] relative flex items-end p-2.5 text-left overflow-hidden shrink-0"
+                  className="w-[130px] h-[130px] rounded-2xl bg-gradient-to-br from-[#4B6B4E] to-[#2C4330] border-[1.5px] border-[#8B4A26] relative flex items-end p-2.5 text-left overflow-hidden shrink-0 gs-press shadow-sm shadow-[#2C4330]/25"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  {/* 지금 찍고 있는 여행 - 옅은 능선과 저녁 해를 깔아 진행중임을 드러낸다 */}
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 130 130" fill="none" aria-hidden="true">
+                    <path d="M0 96l24-22 20 14 26-26 26 20 34-16v64H0z" fill="#ffffff" fillOpacity="0.13" />
+                    <circle cx="100" cy="28" r="8" fill="#E8B769" fillOpacity="0.45" />
+                  </svg>
+                  <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-[#E8B769] px-2 py-0.5 z-10">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#7A5312] animate-pulse" />
+                    <span className="text-[9.5px] font-bold text-[#5C4433]">기록중</span>
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
                   <div className="relative">
                     <p className="text-[13px] font-medium text-white leading-tight">
                       {ongoing.name}
@@ -109,37 +139,50 @@ export default function Gallery() {
 
               <button
                 onClick={() => navigate("/gallery/new")}
-                className="w-[130px] h-[130px] rounded-2xl bg-[#f5f5f7] border border-dashed border-[#c7c7cc] flex flex-col items-center justify-center gap-1.5 shrink-0"
+                className="w-[130px] h-[130px] rounded-2xl bg-[#F8F3E9] border border-dashed border-[#D2C2A6] flex flex-col items-center justify-center gap-1.5 shrink-0 gs-press hover:bg-[#F4EDDF] hover:border-[#B99C74]"
               >
-                <PlusIcon />
-                <span className="text-[11px] text-[#98989d] text-center leading-tight px-2">
+                <span className="w-9 h-9 rounded-full bg-[#F6ECDD] flex items-center justify-center">
+                  <PlusIcon />
+                </span>
+                <span className="text-[11px] text-[#6B6156] text-center leading-tight px-2">
                   {ongoing ? "새 여행\n그룹 만들기" : "진행중인 여행이\n없으면\n그룹 만들기"}
                 </span>
               </button>
             </div>
 
-            <div className="h-px bg-[#e5e5ea] mb-6" />
+            <div className="h-px bg-gradient-to-r from-transparent via-[#DCCFB6] to-transparent mb-6" />
 
             {groupedPast.length === 0 ? (
-              <p className="text-sm text-[#98989d] text-center py-10">
-                지난 여행 기록이 아직 없어요
-              </p>
+              <div className="flex flex-col items-center py-12 gs-rise">
+                <div className="w-14 h-14 rounded-full bg-[#E8F0E6] flex items-center justify-center mb-3 gs-float">
+                  <LeafMark color="#4B6B4E" size={24} />
+                </div>
+                <p className="text-sm text-[#2A2420] mb-1">지난 여행 기록이 아직 없어요</p>
+                <p className="text-xs text-[#8C8274] text-center leading-relaxed">
+                  여행 그룹을 만들고 순간을 담으면
+                  <br />
+                  여기에 차곡차곡 쌓여요
+                </p>
+              </div>
             ) : (
               groupedPast.map(({ month, items }) => (
                 <div key={month} className="mb-6">
                   <div className="flex items-center justify-between mb-2.5">
-                    <p className="text-xs text-[#98989d]">날짜 {month}</p>
+                    <p className="text-xs text-[#6B6156] font-medium rounded-full bg-[#F4EFE6] px-2.5 py-1">
+                      {month}
+                    </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {items.map((g) => (
+                  <div className="grid grid-cols-2 gap-2.5 gs-stagger">
+                    {items.map((g, i) => (
                       <button
                         key={g.id}
                         onClick={() => navigate(`/gallery/${g.id}`)}
-                        className="aspect-square rounded-xl bg-[#f5f5f7] relative flex items-center justify-center overflow-hidden text-left"
+                        className="aspect-square rounded-xl relative flex items-center justify-center overflow-hidden text-left gs-press shadow-sm shadow-[#8B4A26]/10"
+                        style={{ backgroundImage: TILE_SCENES[i % TILE_SCENES.length] }}
                       >
                         <PhotoPlaceholderIcon />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                        <p className="absolute bottom-2 left-2.5 text-[11px] text-white font-medium">
+                        <p className="absolute bottom-2 left-2.5 text-[11px] text-white font-medium drop-shadow">
                           {g.name}
                         </p>
                       </button>
@@ -155,12 +198,12 @@ export default function Gallery() {
 
       {/* 초대코드 참여 모달 */}
       {showJoinModal && (
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center px-8 z-20">
-          <div className="w-full bg-white rounded-2xl p-5">
-            <p className="text-[15px] font-medium text-[#1c1c1e] mb-1.5">
+        <div className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-20 gs-fade-in">
+          <div className="w-full bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-5 gs-scale-in">
+            <p className="text-[15px] font-medium text-[#2A2420] mb-1.5">
               초대코드로 참여하기
             </p>
-            <p className="text-[13px] text-[#6e6e73] mb-4">
+            <p className="text-[13px] text-[#6B6156] mb-4">
               친구에게 받은 초대코드를 입력해주세요
             </p>
             <input
@@ -169,7 +212,7 @@ export default function Gallery() {
               onKeyDown={(e) => e.key === "Enter" && handleJoin()}
               placeholder="초대코드 입력"
               autoFocus
-              className="w-full h-11 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-sm text-[#1c1c1e] outline-none focus:border-[#6F4A2C] mb-1.5"
+              className="w-full h-11 rounded-xl bg-[#F4EFE6] border border-[#E6DDCD] px-3.5 text-sm text-[#2A2420] outline-none focus:border-[#8B4A26] mb-1.5"
             />
             {joinError && (
               <p className="text-xs text-[#d70015] mb-2">{joinError}</p>
@@ -182,14 +225,14 @@ export default function Gallery() {
                   setJoinError("");
                 }}
                 disabled={joining}
-                className="flex-1 h-11 rounded-xl bg-[#f5f5f7] text-[14px] text-[#1c1c1e] font-medium disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-[#F4EFE6] text-[14px] text-[#2A2420] font-medium gs-press disabled:opacity-50"
               >
                 취소
               </button>
               <button
                 onClick={handleJoin}
                 disabled={joining || !inviteCode.trim()}
-                className="flex-1 h-11 rounded-xl bg-[#6F4A2C] text-[14px] text-white font-medium disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-[#8B4A26] text-[14px] text-white font-medium gs-press hover:bg-[#6B3618] disabled:opacity-50"
               >
                 {joining ? "참여 중..." : "참여하기"}
               </button>
@@ -213,16 +256,16 @@ export default function Gallery() {
             onClick={() => setShowNoGroupModal(false)}
           />
           <div className="relative bg-white rounded-2xl px-6 py-6 w-full max-w-[280px] text-center shadow-xl">
-            <p className="text-sm font-medium text-[#1c1c1e] mb-1.5">
+            <p className="text-sm font-medium text-[#2A2420] mb-1.5">
               진행 중인 여행이 없어요
             </p>
-            <p className="text-xs text-[#6e6e73] leading-relaxed mb-5">
+            <p className="text-xs text-[#6B6156] leading-relaxed mb-5">
               새로운 여행 그룹을 만들까요?
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowNoGroupModal(false)}
-                className="flex-1 h-10 rounded-xl bg-[#f5f5f7] text-[#1c1c1e] text-sm"
+                className="flex-1 h-10 rounded-xl bg-[#F4EFE6] text-[#2A2420] text-sm"
               >
                 취소
               </button>
@@ -231,7 +274,7 @@ export default function Gallery() {
                   setShowNoGroupModal(false);
                   navigate("/gallery/new");
                 }}
-                className="flex-1 h-10 rounded-xl bg-[#6F4A2C] text-white text-sm font-medium"
+                className="flex-1 h-10 rounded-xl bg-[#8B4A26] text-white text-sm font-medium gs-press"
               >
                 만들기
               </button>
@@ -250,12 +293,12 @@ function GallerySkeleton() {
   return (
     <>
       <div className="flex gap-2.5 mb-7">
-        <div className="w-[130px] h-[130px] rounded-2xl bg-[#f5f5f7] animate-pulse" />
-        <div className="w-[130px] h-[130px] rounded-2xl bg-[#f5f5f7] animate-pulse" />
+        <div className="w-[130px] h-[130px] rounded-2xl gs-skeleton" />
+        <div className="w-[130px] h-[130px] rounded-2xl gs-skeleton" />
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="aspect-square rounded-xl bg-[#f5f5f7] animate-pulse" />
+          <div key={i} className="aspect-square rounded-xl gs-skeleton" />
         ))}
       </div>
     </>
@@ -285,7 +328,7 @@ function formatShortDate(dateStr) {
 function PlusIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" stroke="#98989d" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M12 5v14M5 12h14" stroke="#8C8274" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -293,9 +336,9 @@ function PlusIcon() {
 function PhotoPlaceholderIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke="#d4d4d8" strokeWidth="1.6" />
-      <circle cx="8.3" cy="9.3" r="1.4" stroke="#d4d4d8" strokeWidth="1.4" />
-      <path d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16" stroke="#d4d4d8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.6" />
+      <circle cx="8.3" cy="9.3" r="1.4" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.4" />
+      <path d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

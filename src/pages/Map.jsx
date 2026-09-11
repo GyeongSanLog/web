@@ -186,7 +186,7 @@ export default function MapPage() {
           <span class="gs-pin-label">${escapeHtml(place.name)}</span>
           <svg width="34" height="42" viewBox="0 0 34 42" fill="none">
             <ellipse cx="17" cy="39" rx="6.5" ry="2.4" fill="rgba(0,0,0,0.18)" />
-            <path d="M17 2c-6.6 0-12 5.3-12 11.9C5 22.8 17 37 17 37s12-14.2 12-23.1C29 7.3 23.6 2 17 2z" fill="#6F4A2C" stroke="#ffffff" stroke-width="2.2" />
+            <path d="M17 2c-6.6 0-12 5.3-12 11.9C5 22.8 17 37 17 37s12-14.2 12-23.1C29 7.3 23.6 2 17 2z" fill="#8B4A26" stroke="#ffffff" stroke-width="2.2" />
             <circle cx="17" cy="13.6" r="4.3" fill="#ffffff" />
           </svg>
         </div>
@@ -272,20 +272,20 @@ export default function MapPage() {
     <div className="h-full flex flex-col relative">
       <AppHeader />
 
-      <div className="flex-1 min-h-0 relative bg-[#eceae6]">
+      <div className="flex-1 min-h-0 relative bg-[#E9E4DA]">
         {/* 지도 */}
         <div ref={mapContainerRef} className="absolute inset-0" />
 
         {/* 지도를 못 띄웠을 때 - 뽑기 기능 자체는 그대로 쓸 수 있게 유지 */}
         {mapError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center bg-[#f5f5f7]">
-            <div className="w-12 h-12 rounded-full bg-[#f3ece4] flex items-center justify-center mb-3">
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center bg-gradient-to-b from-[#F6F0E4] to-[#E9E1D2]">
+            <div className="w-14 h-14 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center mb-3 gs-float">
               <MapOffIcon />
             </div>
-            <p className="text-sm text-[#1c1c1e] mb-1">
+            <p className="text-sm text-[#2A2420] mb-1">
               지도를 불러오지 못했어요
             </p>
-            <p className="text-[11px] leading-relaxed text-[#98989d]">
+            <p className="text-[11px] leading-relaxed text-[#8C8274]">
               {mapError}
               <br />
               여행지 뽑기는 그대로 사용할 수 있어요
@@ -296,7 +296,7 @@ export default function MapPage() {
         {/* 상단 안내 칩 + 현위치 버튼 */}
         {!mapError && (
           <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 z-20 pointer-events-none">
-            <span className="pointer-events-auto max-w-[74%] rounded-full bg-white/95 backdrop-blur px-3 py-1.5 text-[11px] text-[#6e6e73] shadow-sm shadow-black/10 border border-[#e5e5ea]">
+            <span className="pointer-events-auto max-w-[74%] rounded-full bg-[#FFFCF6]/95 backdrop-blur px-3 py-1.5 text-[11px] text-[#6B6156] shadow-sm shadow-black/10 border border-[#EBE0CE] gs-rise">
               {myPos == null
                 ? "현위치를 찾는 중이에요"
                 : myPos.fallback
@@ -307,7 +307,7 @@ export default function MapPage() {
               onClick={handleRecenter}
               disabled={!myPos}
               aria-label="현위치로 이동"
-              className="pointer-events-auto w-9 h-9 shrink-0 rounded-full bg-white flex items-center justify-center shadow-sm shadow-black/10 border border-[#e5e5ea] disabled:opacity-50"
+              className="pointer-events-auto w-10 h-10 shrink-0 rounded-full bg-[#FFFCF6] flex items-center justify-center shadow-sm shadow-black/10 border border-[#EBE0CE] gs-press disabled:opacity-50"
             >
               <CrosshairIcon />
             </button>
@@ -317,7 +317,7 @@ export default function MapPage() {
         {/* 뽑기 실패 안내 */}
         {drawError && (
           <div className="absolute left-0 right-0 bottom-[150px] px-6 z-30 flex justify-center">
-            <p className="rounded-full bg-[#1c1c1e]/85 text-white text-[11px] px-3.5 py-2">
+            <p className="rounded-full bg-[#2A2420]/85 text-white text-[11px] px-3.5 py-2">
               {drawError}
             </p>
           </div>
@@ -329,7 +329,7 @@ export default function MapPage() {
             <button
               onClick={handleDraw}
               disabled={drawing}
-              className="h-12 px-6 rounded-full bg-[#6F4A2C] text-white text-sm font-medium shadow-lg shadow-[#6F4A2C]/30 flex items-center gap-2 active:scale-[0.97] transition-transform disabled:opacity-70"
+              className="h-12 px-6 rounded-full bg-gradient-to-br from-[#A45B2C] to-[#7A3D1C] text-white text-sm font-medium shadow-lg shadow-[#8B4A26]/35 flex items-center gap-2 gs-press disabled:opacity-70"
             >
               <DiceIcon />
               {drawing ? "뽑는 중이에요" : "랜덤 여행지 뽑기"}
@@ -340,9 +340,9 @@ export default function MapPage() {
         {/* 결과 카드 */}
         {phase === "result" && result && (
           <div className="absolute left-0 right-0 bottom-[92px] px-4 z-30 gs-sheet-up">
-            <div className="bg-white rounded-2xl border border-[#e5e5ea] shadow-xl shadow-black/15 p-3.5">
+            <div className="bg-[#FFFCF6] rounded-2xl border border-[#EBE0CE] shadow-xl shadow-black/15 p-3.5">
               <div className="flex items-start gap-3">
-                <div className="w-[58px] h-[58px] rounded-xl bg-[#f5f5f7] overflow-hidden shrink-0 flex items-center justify-center">
+                <div className="w-[58px] h-[58px] rounded-xl bg-gradient-to-br from-[#E7EFE4] to-[#C9DAC3] overflow-hidden shrink-0 flex items-center justify-center">
                   {result.imageUrl ? (
                     <img
                       src={result.imageUrl}
@@ -356,23 +356,23 @@ export default function MapPage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-[10px] text-[#6F4A2C] bg-[#f3ece4] rounded-full px-2 py-0.5">
+                    <span className="text-[10px] text-[#8B4A26] bg-[#F6ECDD] rounded-full px-2 py-0.5">
                       오늘의 여행지
                     </span>
                     {result.category && (
-                      <span className="text-[10px] text-[#98989d]">
+                      <span className="text-[10px] text-[#8C8274]">
                         {result.category}
                       </span>
                     )}
                   </div>
-                  <p className="text-[15px] font-semibold text-[#1c1c1e] truncate">
+                  <p className="text-[15px] font-semibold text-[#2A2420] truncate">
                     {result.name}
                   </p>
-                  <p className="text-[11px] text-[#98989d] truncate mt-0.5">
+                  <p className="text-[11px] text-[#8C8274] truncate mt-0.5">
                     {result.address}
                   </p>
                   {distance && (
-                    <p className="text-[11px] text-[#6e6e73] mt-0.5">
+                    <p className="text-[11px] text-[#6B6156] mt-0.5">
                       내 위치에서 약 {distance}
                     </p>
                   )}
@@ -381,7 +381,7 @@ export default function MapPage() {
                 <button
                   onClick={handleCloseResult}
                   aria-label="닫기"
-                  className="w-7 h-7 shrink-0 rounded-full bg-[#f5f5f7] flex items-center justify-center"
+                  className="w-7 h-7 shrink-0 rounded-full bg-[#F4EFE6] flex items-center justify-center gs-press"
                 >
                   <CloseIcon />
                 </button>
@@ -390,14 +390,14 @@ export default function MapPage() {
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleDraw}
-                  className="flex-1 h-10 rounded-xl bg-[#f5f5f7] text-[#1c1c1e] text-sm flex items-center justify-center gap-1.5"
+                  className="flex-1 h-10 rounded-xl bg-[#F4EFE6] text-[#2A2420] text-sm flex items-center justify-center gap-1.5 gs-press"
                 >
                   <RefreshIcon />
                   다시 뽑기
                 </button>
                 <button
                   onClick={() => navigate(`/spots/${result.id}`)}
-                  className="flex-1 h-10 rounded-xl bg-[#6F4A2C] text-white text-sm font-medium"
+                  className="flex-1 h-10 rounded-xl bg-[#8B4A26] text-white text-sm font-medium gs-press hover:bg-[#6B3618]"
                 >
                   상세보기
                 </button>
@@ -494,7 +494,7 @@ function BigPinIcon() {
         d="M17 2c-6.6 0-12 5.3-12 11.9C5 22.8 17 37 17 37s12-14.2 12-23.1C29 7.3 23.6 2 17 2z"
         fill="#ffffff"
       />
-      <circle cx="17" cy="13.6" r="4.6" fill="#6F4A2C" />
+      <circle cx="17" cy="13.6" r="4.6" fill="#8B4A26" />
     </svg>
   );
 }
@@ -522,10 +522,10 @@ function DiceIcon() {
 function CrosshairIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="4" stroke="#6F4A2C" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="4" stroke="#8B4A26" strokeWidth="1.8" />
       <path
         d="M12 2.5v3.2M12 18.3v3.2M21.5 12h-3.2M5.7 12H2.5"
-        stroke="#6F4A2C"
+        stroke="#8B4A26"
         strokeWidth="1.8"
         strokeLinecap="round"
       />
@@ -538,13 +538,13 @@ function RefreshIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path
         d="M20 12a8 8 0 1 1-2.6-5.9"
-        stroke="#1c1c1e"
+        stroke="#2A2420"
         strokeWidth="1.8"
         strokeLinecap="round"
       />
       <path
         d="M20 4v4.2h-4.2"
-        stroke="#1c1c1e"
+        stroke="#2A2420"
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -558,7 +558,7 @@ function CloseIcon() {
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
       <path
         d="M6 6l12 12M18 6L6 18"
-        stroke="#8e8e93"
+        stroke="#8C8274"
         strokeWidth="2.2"
         strokeLinecap="round"
       />
@@ -571,10 +571,10 @@ function PinSmallIcon() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path
         d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z"
-        stroke="#c7c7cc"
+        stroke="#C6B9A4"
         strokeWidth="1.7"
       />
-      <circle cx="12" cy="9" r="2.2" stroke="#c7c7cc" strokeWidth="1.7" />
+      <circle cx="12" cy="9" r="2.2" stroke="#C6B9A4" strokeWidth="1.7" />
     </svg>
   );
 }
@@ -584,13 +584,13 @@ function MapOffIcon() {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path
         d="M9 5L4 7v13l5-2 6 2 5-2V5l-5 2-6-2z"
-        stroke="#6F4A2C"
+        stroke="#8B4A26"
         strokeWidth="1.7"
         strokeLinejoin="round"
       />
       <path
         d="M4 4l16 16"
-        stroke="#6F4A2C"
+        stroke="#8B4A26"
         strokeWidth="1.7"
         strokeLinecap="round"
       />

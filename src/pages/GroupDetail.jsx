@@ -9,6 +9,7 @@ import {
 } from "../api/groups";
 import { fetchMyInfo } from "../api/member";
 import SlotGrid from "../components/SlotGrid";
+import SectionTitle from "../components/SectionTitle";
 
 export default function GroupDetail() {
   const { groupId } = useParams();
@@ -105,11 +106,11 @@ export default function GroupDetail() {
 
   if (loading) {
     return (
-      <div className="h-full overflow-y-auto bg-white px-5 pt-6">
-        <div className="w-2/3 h-4 bg-[#f5f5f7] rounded animate-pulse mb-5" />
+      <div className="h-full overflow-y-auto bg-[#FDFAF4] px-5 pt-6">
+        <div className="w-2/3 h-4 rounded gs-skeleton mb-5" />
         <div className="grid grid-cols-3 gap-1.5">
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="aspect-square bg-[#f5f5f7] rounded-lg animate-pulse" />
+            <div key={i} className="aspect-square rounded-lg gs-skeleton" />
           ))}
         </div>
       </div>
@@ -118,9 +119,9 @@ export default function GroupDetail() {
 
   if (error || !info) {
     return (
-      <div className="h-full bg-white flex flex-col items-center justify-center px-5">
-        <p className="text-sm text-[#98989d] mb-4">{error || "정보를 불러올 수 없어요"}</p>
-        <button onClick={() => navigate("/gallery")} className="text-sm text-[#6F4A2C] font-medium">
+      <div className="h-full bg-[#FDFAF4] flex flex-col items-center justify-center px-5">
+        <p className="text-sm text-[#8C8274] mb-4">{error || "정보를 불러올 수 없어요"}</p>
+        <button onClick={() => navigate("/gallery")} className="text-sm text-[#8B4A26] font-medium">
           돌아가기
         </button>
       </div>
@@ -132,22 +133,22 @@ export default function GroupDetail() {
   const isGroupEnded = new Date(info.endAt) < new Date();
 
   return (
-    <div className="h-full overflow-y-auto bg-white pb-8 relative">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-8 relative">
       <div className="px-5 pt-6">
 
         {/* 헤더 */}
         <div className="flex items-center gap-2.5 mb-3">
           <button
             onClick={() => navigate("/gallery")}
-            className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center shrink-0"
+            className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center shrink-0 gs-press"
             aria-label="뒤로가기"
           >
             <ArrowLeftIcon />
           </button>
           <div>
-            <p className="text-[15px] font-medium text-[#1c1c1e]">{info.name}</p>
+            <p className="font-brand text-[18px] font-bold text-[#2A2420]">{info.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] text-[#98989d]">
+              <p className="text-[11px] text-[#8C8274]">
                 {formatShortDate(info.startAt)} ~ {formatShortDate(info.endAt)} · {members.length}명 참여
               </p>
               <MemberAvatars members={members} />
@@ -158,15 +159,15 @@ export default function GroupDetail() {
         {/* 초대코드 */}
         <button
           onClick={handleCopyInviteCode}
-          className="w-full flex items-center justify-between bg-[#f3ece4] rounded-xl px-3.5 py-2.5 mb-6"
+          className="w-full flex items-center justify-between bg-gradient-to-r from-[#F8EEDC] to-[#F3E5CC] border border-[#EBDCC4] rounded-2xl px-3.5 py-3 mb-6 gs-press gs-rise"
         >
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#6e6e73]">초대코드</span>
-            <span className="text-[13px] font-medium text-[#1c1c1e] tracking-wide">
+            <span className="text-[11px] text-[#6B6156]">초대코드</span>
+            <span className="text-[13px] font-medium text-[#2A2420] tracking-wide">
               {info.inviteCode}
             </span>
           </div>
-          <span className="text-[11px] text-[#6F4A2C] font-medium">
+          <span className="text-[11px] text-[#8B4A26] font-medium">
             {copied ? "복사됨!" : "복사하기"}
           </span>
         </button>
@@ -183,33 +184,37 @@ export default function GroupDetail() {
         />
 
         {/* 받은 편지 - 그룹 종료일이 지나기 전까지는 비활성화 (여행 끝난 뒤에만 공개) */}
-        <p className="text-sm font-medium text-[#1c1c1e] mb-2.5 mt-7">받은 편지</p>
+        <div className="mt-7">
+          <SectionTitle tone="#B04A46">받은 편지</SectionTitle>
+        </div>
         {!isGroupEnded ? (
-          <div className="flex flex-col items-center gap-1.5 py-8 bg-[#f5f5f7] rounded-xl">
-            <LockIcon />
-            <p className="text-xs text-[#6e6e73] mt-1">
+          <div className="flex flex-col items-center gap-1.5 py-9 bg-[#F8F3E9] border border-[#EFE4D2] rounded-2xl">
+            <span className="w-11 h-11 rounded-full bg-[#F6ECDD] flex items-center justify-center gs-float">
+              <LockIcon />
+            </span>
+            <p className="text-xs text-[#6B6156] mt-1">
               여행이 끝나면 편지를 확인할 수 있어요
             </p>
-            <p className="text-[11px] text-[#98989d]">
+            <p className="text-[11px] text-[#8C8274]">
               {formatShortDate(info.endAt)}까지 여행 진행중
             </p>
           </div>
         ) : letters.length === 0 ? (
-          <p className="text-xs text-[#98989d] py-4">아직 남겨진 편지가 없어요</p>
+          <p className="text-xs text-[#8C8274] py-4">아직 남겨진 편지가 없어요</p>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 gs-stagger">
             {letters.map((letter) => (
               <button
                 key={letter.letterId}
                 onClick={() => handleOpenLetter(letter.letterId)}
-                className="bg-[#f5f5f7] rounded-xl p-3 flex items-center gap-2.5 text-left"
+                className="bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-3 flex items-center gap-2.5 text-left gs-press hover:bg-[#FBF5EA]"
               >
-                <div className="w-8 h-8 rounded-full bg-[#6F4A2C] flex items-center justify-center text-xs text-white font-medium shrink-0">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#C2685C] to-[#9C4640] flex items-center justify-center text-xs text-white font-medium shrink-0">
                   {letter.writerNickname?.[0] ?? "?"}
                 </div>
                 <div>
-                  <p className="text-xs text-[#1c1c1e]">{letter.writerNickname}님이 남긴 편지</p>
-                  <p className="text-[11px] text-[#98989d] mt-0.5">
+                  <p className="text-xs text-[#2A2420]">{letter.writerNickname}님이 남긴 편지</p>
+                  <p className="text-[11px] text-[#8C8274] mt-0.5">
                     {formatShortDateTime(letter.createdAt)}
                   </p>
                 </div>
@@ -219,7 +224,7 @@ export default function GroupDetail() {
         )}
 
         {/* 그룹 탈퇴 */}
-        <div className="h-px bg-[#e5e5ea] mt-8 mb-4" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#DCCFB6] to-transparent mt-8 mb-4" />
         <button
           onClick={() => {
             setWithdrawError("");
@@ -235,7 +240,7 @@ export default function GroupDetail() {
       {/* 클립 재생 모달 */}
       {openClip && (
         <div
-          className="absolute inset-0 bg-black/70 flex items-center justify-center px-8 z-10"
+          className="absolute inset-0 bg-[#1A1008]/75 flex items-center justify-center px-8 z-10 gs-fade-in"
           onClick={() => setOpenClip(null)}
         >
           <div
@@ -279,33 +284,33 @@ export default function GroupDetail() {
       {/* 편지 내용 모달 */}
       {openLetterId && (
         <div
-          className="absolute inset-0 bg-black/40 flex items-center justify-center px-8 z-10"
+          className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-10 gs-fade-in"
           onClick={() => setOpenLetterId(null)}
         >
           <div
-            className="w-full bg-white rounded-2xl p-5"
+            className="w-full bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-5 gs-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
             {loadingLetterContent ? (
-              <div className="py-6 text-center text-sm text-[#98989d]">불러오는 중...</div>
+              <div className="py-6 text-center text-sm text-[#8C8274]">불러오는 중...</div>
             ) : openLetterContent?.error ? (
               <p className="text-sm text-[#d70015] py-4">{openLetterContent.error}</p>
             ) : (
               <>
-                <p className="text-[13px] font-medium text-[#1c1c1e] mb-1">
+                <p className="text-[13px] font-medium text-[#2A2420] mb-1">
                   {openLetterContent?.writerNickname}님의 편지
                 </p>
-                <p className="text-[11px] text-[#98989d] mb-4">
+                <p className="text-[11px] text-[#8C8274] mb-4">
                   {formatShortDateTime(openLetterContent?.createdAt)}
                 </p>
-                <p className="text-sm text-[#1c1c1e] leading-relaxed whitespace-pre-wrap">
+                <p className="text-sm text-[#2A2420] leading-relaxed whitespace-pre-wrap">
                   {openLetterContent?.content}
                 </p>
               </>
             )}
             <button
               onClick={() => setOpenLetterId(null)}
-              className="w-full h-11 rounded-xl bg-[#f5f5f7] text-[14px] text-[#1c1c1e] font-medium mt-5"
+              className="w-full h-11 rounded-xl bg-[#F4EFE6] text-[14px] text-[#2A2420] font-medium mt-5"
             >
               닫기
             </button>
@@ -315,12 +320,12 @@ export default function GroupDetail() {
 
       {/* 탈퇴 확인 모달 */}
       {showWithdrawConfirm && (
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center px-8 z-10">
-          <div className="w-full bg-white rounded-2xl p-5">
-            <p className="text-[15px] font-medium text-[#1c1c1e] mb-1.5">
+        <div className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-10 gs-fade-in">
+          <div className="w-full bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-5 gs-scale-in">
+            <p className="text-[15px] font-medium text-[#2A2420] mb-1.5">
               정말 탈퇴하시겠어요?
             </p>
-            <p className="text-[13px] text-[#6e6e73] mb-4">
+            <p className="text-[13px] text-[#6B6156] mb-4">
               리더는 그룹에 혼자 남았을 때만 탈퇴할 수 있어요.
               탈퇴 후에는 되돌릴 수 없어요.
             </p>
@@ -333,7 +338,7 @@ export default function GroupDetail() {
               <button
                 onClick={() => setShowWithdrawConfirm(false)}
                 disabled={withdrawing}
-                className="flex-1 h-11 rounded-xl bg-[#f5f5f7] text-[14px] text-[#1c1c1e] font-medium disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-[#F4EFE6] text-[14px] text-[#2A2420] font-medium disabled:opacity-50"
               >
                 취소
               </button>
@@ -368,19 +373,19 @@ function MemberAvatars({ members }) {
       {visibleMembers.map((m) => (
         <div
           key={m.userId}
-          className="w-4 h-4 rounded-full bg-[#f3ece4] border border-white flex items-center justify-center overflow-hidden shrink-0"
+          className="w-4 h-4 rounded-full bg-[#F6ECDD] border border-[#FDFAF4] flex items-center justify-center overflow-hidden shrink-0"
         >
           {m.profileImageUrl ? (
             <img src={m.profileImageUrl} alt={m.nickname} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-[7px] text-[#6F4A2C] font-medium">
+            <span className="text-[7px] text-[#8B4A26] font-medium">
               {m.nickname?.[0] ?? "?"}
             </span>
           )}
         </div>
       ))}
       {extraCount > 0 && (
-        <span className="text-[9px] text-[#98989d] pl-2">+{extraCount}</span>
+        <span className="text-[9px] text-[#8C8274] pl-2">+{extraCount}</span>
       )}
     </div>
   );
@@ -413,7 +418,7 @@ function slotIndexToTimeLabel(slotIndex) {
 function ArrowLeftIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <path d="M15 19l-7-7 7-7" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 19l-7-7 7-7" stroke="#2A2420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -421,8 +426,8 @@ function ArrowLeftIcon() {
 function LockIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="#98989d" strokeWidth="1.7" />
-      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="#98989d" strokeWidth="1.7" strokeLinecap="round" />
+      <rect x="5" y="10.5" width="14" height="9" rx="2" stroke="#8C8274" strokeWidth="1.7" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" stroke="#8C8274" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

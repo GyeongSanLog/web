@@ -4,7 +4,7 @@ import { fetchMyInfo, updateMyInfo } from "../api/member";
 import { ProfileAvatar } from "./MyPage";
 
 const inputClass =
-  "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors";
+  "w-full h-11 rounded-[10px] bg-[#F4EFE6] border border-[#E6DDCD] px-3.5 text-[13px] text-[#2A2420] placeholder-[#8C8274] outline-none focus:border-[#8B4A26] transition-colors";
 
 export default function ProfileEdit() {
   const navigate = useNavigate();
@@ -81,23 +81,23 @@ export default function ProfileEdit() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white px-6 py-8">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4] px-6 py-8">
       <div className="w-full max-w-sm mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#2A2420]"
             aria-label="뒤로가기"
           >
             <ArrowLeftIcon />
           </button>
-          <p className="text-base font-medium text-[#1c1c1e]">프로필 수정</p>
+          <p className="text-base font-medium text-[#2A2420]">프로필 수정</p>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center">
-            <div className="w-20 h-20 rounded-full bg-[#f5f5f7] animate-pulse mb-4" />
-            <div className="w-40 h-11 rounded-[10px] bg-[#f5f5f7] animate-pulse" />
+            <div className="w-20 h-20 rounded-full gs-skeleton mb-4" />
+            <div className="w-40 h-11 rounded-[10px] gs-skeleton" />
           </div>
         ) : (
           <>
@@ -111,12 +111,12 @@ export default function ProfileEdit() {
                   <img
                     src={previewUrl}
                     alt="프로필 사진 미리보기"
-                    className="w-20 h-20 rounded-full object-cover border-2 border-[#6F4A2C]"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-[#8B4A26]"
                   />
                 ) : (
                   <ProfileAvatar user={user} size={80} />
                 )}
-                <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#6F4A2C] border-2 border-white flex items-center justify-center text-white text-xs">
+                <span className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#8B4A26] border-2 border-white flex items-center justify-center text-white text-xs gs-press">
                   +
                 </span>
               </button>
@@ -127,12 +127,12 @@ export default function ProfileEdit() {
                 onChange={handleImagePick}
                 className="hidden"
               />
-              <p className="mt-2 text-xs text-[#98989d]">사진을 눌러 변경</p>
+              <p className="mt-2 text-xs text-[#8C8274]">사진을 눌러 변경</p>
             </div>
 
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-xs text-[#6e6e73] mb-1.5">닉네임</p>
+                <p className="text-xs text-[#6B6156] mb-1.5">닉네임</p>
                 <input
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
@@ -147,8 +147,8 @@ export default function ProfileEdit() {
               </div>
 
               <div>
-                <p className="text-xs text-[#6e6e73] mb-1.5">이메일</p>
-                <div className={`${inputClass} flex items-center text-[#98989d]`}>
+                <p className="text-xs text-[#6B6156] mb-1.5">이메일</p>
+                <div className={`${inputClass} flex items-center text-[#8C8274]`}>
                   {user?.email}
                 </div>
               </div>
@@ -161,8 +161,8 @@ export default function ProfileEdit() {
               disabled={!canSubmit || submitting}
               className={`w-full h-12 rounded-xl text-sm font-medium mt-8 transition-colors ${
                 canSubmit && !submitting
-                  ? "bg-[#6F4A2C] text-white hover:bg-[#5c3d24]"
-                  : "bg-[#e5e5ea] text-[#98989d]"
+                  ? "bg-[#8B4A26] text-white hover:bg-[#6B3618]"
+                  : "bg-[#E6DDCD] text-[#8C8274]"
               }`}
             >
               {submitting ? "저장 중..." : "저장하기"}
@@ -179,7 +179,7 @@ function ArrowLeftIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path
         d="M15 19l-7-7 7-7"
-        stroke="#1c1c1e"
+        stroke="#2A2420"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"

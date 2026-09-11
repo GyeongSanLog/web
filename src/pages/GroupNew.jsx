@@ -56,18 +56,20 @@ export default function GroupNew() {
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4]">
       <AppHeader />
 
       <form onSubmit={handleSubmit} className="px-5 pt-6 pb-10">
-        <p className="text-lg font-medium text-[#1c1c1e] mb-6">새 여행 그룹 만들기</p>
+        <p className="font-brand text-[22px] font-bold text-[#2A2420] mb-6 gs-rise">
+          새 여행 그룹 만들기
+        </p>
 
         {/* 썸네일 */}
         <div className="flex flex-col items-center mb-7">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-24 h-24 rounded-2xl bg-[#f5f5f7] border border-dashed border-[#c7c7cc] flex items-center justify-center overflow-hidden"
+            className="w-24 h-24 rounded-2xl bg-[#F8F3E9] border border-dashed border-[#D2C2A6] flex items-center justify-center overflow-hidden gs-press hover:bg-[#F4EDDF] hover:border-[#B99C74]"
           >
             {imagePreviewUrl ? (
               <img src={imagePreviewUrl} alt="그룹 썸네일 미리보기" className="w-full h-full object-cover" />
@@ -82,44 +84,44 @@ export default function GroupNew() {
             onChange={handleImageChange}
             className="hidden"
           />
-          <p className="text-xs text-[#98989d] mt-2">썸네일 (선택)</p>
+          <p className="text-xs text-[#8C8274] mt-2">썸네일 (선택)</p>
         </div>
 
         {/* 그룹명 */}
         <div className="mb-5">
-          <label className="text-sm text-[#1c1c1e] font-medium block mb-2">그룹명</label>
+          <label className="text-sm text-[#2A2420] font-medium block mb-2">그룹명</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="예: 제주도 여름 여행"
             maxLength={30}
-            className="w-full h-12 px-4 rounded-xl bg-[#f5f5f7] text-[15px] text-[#1c1c1e] placeholder:text-[#98989d] outline-none focus:ring-2 focus:ring-[#6F4A2C]"
+            className="w-full h-12 px-4 rounded-2xl bg-[#FFFDF8] border border-[#E7DAC4] text-[15px] text-[#2A2420] placeholder:text-[#9A9082] outline-none transition-colors focus:border-[#8B4A26]"
           />
         </div>
 
         {/* 시작일 / 종료일 */}
         <div className="flex gap-3 mb-2">
           <div className="flex-1">
-            <label className="text-sm text-[#1c1c1e] font-medium block mb-2">시작일</label>
+            <label className="text-sm text-[#2A2420] font-medium block mb-2">시작일</label>
             <input
               type="date"
               value={startAt}
               onChange={(e) => setStartAt(e.target.value)}
-              className="w-full h-12 px-3 rounded-xl bg-[#f5f5f7] text-[15px] text-[#1c1c1e] outline-none focus:ring-2 focus:ring-[#6F4A2C]"
+              className="w-full h-12 px-3 rounded-2xl bg-[#FFFDF8] border border-[#E7DAC4] text-[15px] text-[#2A2420] outline-none transition-colors focus:border-[#8B4A26]"
             />
           </div>
           <div className="flex-1">
-            <label className="text-sm text-[#1c1c1e] font-medium block mb-2">종료일</label>
+            <label className="text-sm text-[#2A2420] font-medium block mb-2">종료일</label>
             <input
               type="date"
               value={endAt}
               onChange={(e) => setEndAt(e.target.value)}
-              className="w-full h-12 px-3 rounded-xl bg-[#f5f5f7] text-[15px] text-[#1c1c1e] outline-none focus:ring-2 focus:ring-[#6F4A2C]"
+              className="w-full h-12 px-3 rounded-2xl bg-[#FFFDF8] border border-[#E7DAC4] text-[15px] text-[#2A2420] outline-none transition-colors focus:border-[#8B4A26]"
             />
           </div>
         </div>
-        <p className="text-xs text-[#98989d] mb-6">
+        <p className="text-xs text-[#8C8274] mb-6">
           초대코드는 그룹 생성 후 자동으로 만들어져요 (최대 10명까지 참여 가능)
         </p>
 
@@ -130,7 +132,7 @@ export default function GroupNew() {
         <button
           type="submit"
           disabled={!isValid || submitting}
-          className="w-full h-12 rounded-xl bg-[#6F4A2C] text-white text-[15px] font-medium disabled:bg-[#c7c7cc] disabled:cursor-not-allowed mt-2 active:bg-[#5c3d24]"
+          className="w-full h-12 rounded-xl bg-[#8B4A26] text-white text-[15px] font-medium disabled:bg-[#C6B9A4] disabled:cursor-not-allowed mt-2 active:bg-[#6B3618] gs-press"
         >
           {submitting ? "만드는 중..." : "그룹 만들기"}
         </button>
@@ -144,11 +146,11 @@ function CameraIcon() {
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
       <path
         d="M4 8.5a1.5 1.5 0 0 1 1.5-1.5h2l1-1.5h7l1 1.5h2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-9Z"
-        stroke="#98989d"
+        stroke="#8C8274"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <circle cx="12" cy="12.5" r="3.2" stroke="#98989d" strokeWidth="1.6" />
+      <circle cx="12" cy="12.5" r="3.2" stroke="#8C8274" strokeWidth="1.6" />
     </svg>
   );
 }

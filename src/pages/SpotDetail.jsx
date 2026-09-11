@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fetchAreaDetail, toggleAreaFavorite, fetchAreaRecommendations } from "../api/areas";
+import SectionTitle from "../components/SectionTitle";
+import {
+  AREA_TYPE_LABELS,
+  fetchAreaDetail,
+  toggleAreaFavorite,
+  fetchAreaRecommendations,
+} from "../api/areas";
+import { categoryStyle } from "../utils/category";
 
 export default function SpotDetail() {
   const { id } = useParams();
@@ -15,7 +22,13 @@ export default function SpotDetail() {
   useEffect(() => {
     setLoading(true);
     fetchAreaDetail(id)
-      .then((data) => setSpot(data))
+      .then((data) => {
+        setSpot(data);
+        // 서버가 찜 여부를 함께 내려주면 하트를 그 상태로 맞춘다.
+        // 스웨거의 PlaceDetailResponse에는 아직 이 필드가 없어서(추가 요청 필요)
+        // 필드가 없으면 false로 두고, 사용자가 누르는 순간부터만 반영된다.
+        setFavorited(Boolean(data?.favorited ?? data?.isFavorite ?? false));
+      })
       .catch((err) => {
         if (err.message === "AUTH_EXPIRED") {
           navigate("/login");
@@ -55,21 +68,21 @@ export default function SpotDetail() {
 
   if (loading) {
     return (
-      <div className="h-full overflow-y-auto bg-white px-5 pt-6">
-        <div className="w-full h-[190px] rounded-2xl bg-[#f5f5f7] animate-pulse mb-4" />
-        <div className="w-1/2 h-4 bg-[#f5f5f7] rounded animate-pulse mb-2" />
-        <div className="w-2/3 h-3 bg-[#f5f5f7] rounded animate-pulse" />
+      <div className="h-full overflow-y-auto bg-[#FDFAF4] px-5 pt-6">
+        <div className="w-full h-[190px] rounded-2xl gs-skeleton mb-4" />
+        <div className="w-1/2 h-4 rounded gs-skeleton mb-2" />
+        <div className="w-2/3 h-3 rounded gs-skeleton" />
       </div>
     );
   }
 
   if (error || !spot) {
     return (
-      <div className="h-full bg-white flex flex-col items-center justify-center px-5">
-        <p className="text-sm text-[#98989d] mb-4">
+      <div className="h-full bg-[#FDFAF4] flex flex-col items-center justify-center px-5">
+        <p className="text-sm text-[#8C8274] mb-4">
           {error || "장소 정보를 불러올 수 없어요"}
         </p>
-        <button onClick={() => navigate(-1)} className="text-sm text-[#6F4A2C] font-medium">
+        <button onClick={() => navigate(-1)} className="text-sm text-[#8B4A26] font-medium gs-press">
           돌아가기
         </button>
       </div>
@@ -86,22 +99,24 @@ export default function SpotDetail() {
   ];
 
   const images = spot.imageUrls?.length ? spot.imageUrls : spot.imageUrl ? [spot.imageUrl] : [];
+  const cat = categoryStyle(spot.category);
 
   return (
-    <div className="h-full overflow-y-auto bg-white pb-8">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-8">
 
       {/* 이미지 슬라이드 영역 */}
       <div className="relative">
-        <div className="w-full h-[190px] bg-[#f5f5f7] flex items-center justify-center overflow-hidden">
+        <div className="w-full h-[210px] bg-gradient-to-br from-[#DCE7D6] to-[#9DB894] flex items-center justify-center overflow-hidden">
           {images[0] ? (
             <img src={images[0]} alt={spot.name} className="w-full h-full object-cover" />
           ) : (
             <ImageIcon />
           )}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#FDFAF4] to-transparent" />
         </div>
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-3.5 left-3.5 w-8 h-8 rounded-full bg-white/90 shadow-sm flex items-center justify-center"
+          className="absolute top-3.5 left-3.5 w-9 h-9 rounded-full bg-[#FFFCF6]/92 backdrop-blur shadow-sm shadow-black/10 flex items-center justify-center gs-press"
           aria-label="뒤로가기"
         >
           <ArrowLeftIcon />
@@ -109,7 +124,7 @@ export default function SpotDetail() {
         <button
           onClick={handleToggleFavorite}
           disabled={togglingFavorite}
-          className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/90 shadow-sm flex items-center justify-center disabled:opacity-60"
+          className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-[#FFFCF6]/92 backdrop-blur shadow-sm shadow-black/10 flex items-center justify-center gs-press disabled:opacity-60"
           aria-label="찜하기"
         >
           <HeartIcon filled={favorited} />
@@ -123,22 +138,30 @@ export default function SpotDetail() {
 
       <div className="px-5 pt-4">
 
-        <p className="text-xs text-[#6F4A2C] mb-1">
-          {spot.category} · {spot.address}
-        </p>
-        <p className="text-[19px] font-medium text-[#1c1c1e] mb-3.5">
+        <div className="flex items-center gap-1.5 mb-1.5 gs-rise">
+          {spot.category && (
+            <span
+              className="text-[10.5px] font-medium rounded-full px-2 py-0.5"
+              style={{ backgroundColor: cat.bg, color: cat.fg }}
+            >
+              {AREA_TYPE_LABELS[spot.category] ?? spot.category}
+            </span>
+          )}
+          <p className="text-[11px] text-[#8C8274] truncate">{spot.address}</p>
+        </div>
+        <p className="font-brand text-[22px] font-bold text-[#2A2420] mb-3.5 gs-rise">
           {spot.name}
         </p>
 
         {spot.content && (
-          <p className="text-[13px] leading-relaxed text-[#6e6e73] mb-5">
+          <p className="text-[13px] leading-relaxed text-[#6B6156] mb-5">
             {spot.content}
           </p>
         )}
 
         {/* 관광 정보 */}
-        <p className="text-sm font-medium text-[#1c1c1e] mb-2">관광 정보</p>
-        <div className="rounded-xl bg-[#f5f5f7] px-3.5 py-1 mb-6">
+        <SectionTitle tone="#8B4A26">관광 정보</SectionTitle>
+        <div className="rounded-2xl bg-[#F8F3E9] border border-[#EFE4D2] px-3.5 py-1 mb-6">
           <InfoRow label="전화번호" value={spot.phoneNumber || "정보 없음"} />
           <InfoRow label="운영시간" value={spot.useTime || "정보 없음"} />
           <InfoRow label="휴무일" value={spot.restDate || "정보 없음"} />
@@ -146,40 +169,50 @@ export default function SpotDetail() {
         </div>
 
         {/* 무장애 관광정보 */}
-        <p className="text-sm font-medium text-[#1c1c1e] mb-2.5">무장애 관광정보</p>
-        <div className="flex gap-4 overflow-x-auto -mx-5 px-5 pb-1 mb-6 scrollbar-hide">
+        <SectionTitle tone="#3F6B45">무장애 관광정보</SectionTitle>
+        <div className="flex gap-4 overflow-x-auto -mx-5 px-5 pb-1 mb-6 scrollbar-hide gs-stagger">
           {accessibilityItems.map((item) => (
             <AccessIcon key={item.label} {...item} />
           ))}
         </div>
 
-        {/* 지도 - 위경도는 있지만 지도 SDK 연동은 별도 작업 필요 */}
-        <div className="w-full h-[130px] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
-          <MapPinOffIcon />
+        {/* 지도 - 위경도는 있지만 이 화면의 지도 SDK 연동은 별도 작업 필요
+            (지도 탭에는 이미 붙어 있음 - utils/kakaoMap.js) */}
+        <div className="relative w-full h-[130px] rounded-2xl bg-gradient-to-b from-[#E7EFE4] to-[#D6E3D1] border border-[#D5E0CF] overflow-hidden flex flex-col items-center justify-center">
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 340 130" fill="none" aria-hidden="true">
+            <path d="M0 104l44-30 34 20 46-34 44 30 52-26 60 30v36H0z" fill="#9DB894" fillOpacity="0.45" />
+            <path d="M0 118l52-20 40 12 50-18 48 16 56-14 94 16v20H0z" fill="#4B6B4E" fillOpacity="0.35" />
+          </svg>
+          <div className="relative gs-float">
+            <MapPinOffIcon />
+          </div>
+          <p className="relative text-[11px] text-[#4B6B4E] mt-1.5">
+            지도는 지도 탭에서 볼 수 있어요
+          </p>
         </div>
 
         {/* 추천 - 같은 장소 기준 가까운 3곳 */}
         {recommendations.length > 0 && (
           <>
-            <p className="text-sm font-medium text-[#1c1c1e] mb-2.5 mt-7">
-              이런 곳도 있어요
-            </p>
-            <div className="flex gap-2.5 overflow-x-auto -mx-5 px-5 pb-1 scrollbar-hide">
+            <div className="mt-7">
+              <SectionTitle tone="#B04A46">이런 곳도 있어요</SectionTitle>
+            </div>
+            <div className="flex gap-2.5 overflow-x-auto -mx-5 px-5 pb-1 scrollbar-hide gs-stagger">
               {recommendations.map((rec) => (
                 <button
                   key={rec.id}
                   onClick={() => navigate(`/spots/${rec.id}`)}
-                  className="shrink-0 w-[110px] text-left"
+                  className="shrink-0 w-[110px] text-left gs-press"
                 >
-                  <div className="w-[110px] h-[110px] rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] flex items-center justify-center mb-1.5 overflow-hidden">
+                  <div className="w-[110px] h-[110px] rounded-2xl bg-[#F6F0E4] border border-[#EBE0CE] flex items-center justify-center mb-1.5 overflow-hidden shadow-sm shadow-[#8B4A26]/5">
                     {rec.imageUrl ? (
                       <img src={rec.imageUrl} alt={rec.name} className="w-full h-full object-cover" />
                     ) : (
                       <ImageIcon />
                     )}
                   </div>
-                  <p className="text-xs text-[#1c1c1e] leading-tight">{rec.name}</p>
-                  <p className="text-[10px] text-[#98989d] mt-0.5">{rec.address}</p>
+                  <p className="text-xs text-[#2A2420] leading-tight">{rec.name}</p>
+                  <p className="text-[10px] text-[#8C8274] mt-0.5">{rec.address}</p>
                 </button>
               ))}
             </div>
@@ -193,9 +226,9 @@ export default function SpotDetail() {
 
 function InfoRow({ label, value, last }) {
   return (
-    <div className={`flex items-center justify-between text-xs py-2.5 ${!last ? "border-b border-[#e5e5ea]" : ""}`}>
-      <span className="text-[#98989d]">{label}</span>
-      <span className="text-[#1c1c1e]">{value}</span>
+    <div className={`flex items-center justify-between text-xs py-2.5 ${!last ? "border-b border-[#E6DDCD]" : ""}`}>
+      <span className="text-[#8C8274]">{label}</span>
+      <span className="text-[#2A2420]">{value}</span>
     </div>
   );
 }
@@ -213,12 +246,12 @@ function AccessIcon({ label, value, icon: Icon }) {
     <div className="flex flex-col items-center shrink-0 w-[52px]">
       <div
         className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 ${
-          available ? "bg-[#e6f4ea]" : "bg-[#f5f5f7]"
+          available ? "bg-[#E7F0E2] border border-[#D3E3CC]" : "bg-[#F4EFE6] border border-[#EBE0CE]"
         }`}
       >
-        <Icon color={available ? "#1f8b3f" : "#c7c7cc"} />
+        <Icon color={available ? "#3F7A47" : "#C6B9A4"} />
       </div>
-      <p className="text-[9.5px] text-[#6e6e73] leading-tight text-center">{label}</p>
+      <p className="text-[9.5px] text-[#6B6156] leading-tight text-center">{label}</p>
     </div>
   );
 }
@@ -228,7 +261,7 @@ function AccessIcon({ label, value, icon: Icon }) {
 function ArrowLeftIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-      <path d="M15 19l-7-7 7-7" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 19l-7-7 7-7" stroke="#2A2420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -239,7 +272,7 @@ function HeartIcon({ filled }) {
       <path
         d="M12 20s-7-4.35-9.5-8.8C.7 7.8 2.6 4 6.2 4c2 0 3.4 1.1 4 2.4C10.8 5.1 12.2 4 14.2 4c3.6 0 5.5 3.8 3.7 7.2C19 15.65 12 20 12 20z"
         fill={filled ? "#d70015" : "none"}
-        stroke={filled ? "#d70015" : "#1c1c1e"}
+        stroke={filled ? "#d70015" : "#2A2420"}
         strokeWidth="1.7"
       />
     </svg>
@@ -249,9 +282,9 @@ function HeartIcon({ filled }) {
 function ImageIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke="#c7c7cc" strokeWidth="1.5" />
-      <circle cx="8.3" cy="9.3" r="1.4" stroke="#c7c7cc" strokeWidth="1.4" />
-      <path d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16" stroke="#c7c7cc" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke="#C6B9A4" strokeWidth="1.5" />
+      <circle cx="8.3" cy="9.3" r="1.4" stroke="#C6B9A4" strokeWidth="1.4" />
+      <path d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16" stroke="#C6B9A4" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -259,8 +292,8 @@ function ImageIcon() {
 function MapPinOffIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" stroke="#c7c7cc" strokeWidth="1.5" />
-      <path d="M4 4l16 16" stroke="#c7c7cc" strokeWidth="1.5" />
+      <path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" fill="#ffffff" fillOpacity="0.7" stroke="#4B6B4E" strokeWidth="1.6" />
+      <circle cx="12" cy="9" r="2.2" fill="#8B4A26" />
     </svg>
   );
 }
