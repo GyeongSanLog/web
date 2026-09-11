@@ -100,7 +100,7 @@ export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId
         <button
           onClick={goPrev}
           disabled={!canGoPrev}
-          className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center disabled:opacity-30"
+          className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center gs-press disabled:opacity-30"
           aria-label="이전 시간대"
         >
           <ChevronLeftIcon />
@@ -108,7 +108,7 @@ export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId
 
         <button
           onClick={() => setShowCalendar(true)}
-          className="text-[13px] text-[#1c1c1e] font-medium min-w-[110px] text-center"
+          className="font-brand text-[15px] text-[#2A2420] font-bold min-w-[110px] text-center rounded-full px-3 py-1 gs-press hover:bg-[#F6ECDD]"
         >
           {formatSlotDateLabel(startAt, slotIndex)}
         </button>
@@ -116,7 +116,7 @@ export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId
         <button
           onClick={goNext}
           disabled={!canGoNext}
-          className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center disabled:opacity-30"
+          className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center gs-press disabled:opacity-30"
           aria-label="다음 시간대"
         >
           <ChevronRightIcon />
@@ -126,11 +126,11 @@ export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId
       {/* 날짜 선택 캘린더 모달 */}
       {showCalendar && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center px-8 z-30"
+          className="fixed inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-30 gs-fade-in"
           onClick={() => setShowCalendar(false)}
         >
           <div
-            className="w-full max-w-[300px] bg-white rounded-2xl p-4"
+            className="w-full max-w-[300px] bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <MiniCalendar
@@ -188,19 +188,19 @@ function MiniCalendar({ startAt, endAt, selectedDate, onPick }) {
           onClick={() =>
             setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))
           }
-          className="w-7 h-7 rounded-full bg-[#f5f5f7] flex items-center justify-center"
+          className="w-7 h-7 rounded-full bg-[#F6ECDD] flex items-center justify-center gs-press"
           aria-label="이전 달"
         >
           <ChevronLeftIcon size={12} />
         </button>
-        <p className="text-sm font-medium text-[#1c1c1e]">
+        <p className="text-sm font-medium text-[#2A2420]">
           {viewMonth.getFullYear()}.{String(viewMonth.getMonth() + 1).padStart(2, "0")}
         </p>
         <button
           onClick={() =>
             setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))
           }
-          className="w-7 h-7 rounded-full bg-[#f5f5f7] flex items-center justify-center"
+          className="w-7 h-7 rounded-full bg-[#F6ECDD] flex items-center justify-center gs-press"
           aria-label="다음 달"
         >
           <ChevronRightIcon size={12} />
@@ -209,7 +209,7 @@ function MiniCalendar({ startAt, endAt, selectedDate, onPick }) {
 
       <div className="grid grid-cols-7 gap-1 mb-1">
         {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-          <div key={d} className="text-center text-[10px] text-[#98989d] py-1">
+          <div key={d} className="text-center text-[10px] text-[#8C8274] py-1">
             {d}
           </div>
         ))}
@@ -228,10 +228,10 @@ function MiniCalendar({ startAt, endAt, selectedDate, onPick }) {
               disabled={!selectable}
               className={`aspect-square rounded-lg text-xs flex items-center justify-center ${
                 selected
-                  ? "bg-[#6F4A2C] text-white font-medium"
+                  ? "bg-[#8B4A26] text-white font-medium"
                   : selectable
-                  ? "text-[#1c1c1e]"
-                  : "text-[#c7c7cc] opacity-40"
+                  ? "text-[#2A2420]"
+                  : "text-[#C6B9A4] opacity-40"
               }`}
             >
               {date.getDate()}
@@ -339,11 +339,15 @@ function MemberCell({ member, clip, onOpenClip, aspectClass, style, isMe, canRec
 
     return (
       <div
-        className={`${aspectClass ?? ""} rounded-lg bg-[#f5f5f7] flex flex-col items-center justify-center gap-1`}
+        className={`${aspectClass ?? ""} rounded-lg flex flex-col items-center justify-center gap-1 transition-colors ${
+          showRecordButton
+            ? "bg-[#FBF0DA] border border-[#E8B769]"
+            : "bg-[#F6F1E6] border border-dashed border-[#DFD2BC]"
+        }`}
         style={style}
       >
         <div className={`flex flex-col items-center gap-1.5 ${showRecordButton ? "-translate-y-1.5" : ""}`}>
-          <div className="w-9 h-9 rounded-full bg-[#e5e5ea] flex items-center justify-center overflow-hidden shrink-0">
+          <div className="w-9 h-9 rounded-full bg-[#EFE4D0] flex items-center justify-center overflow-hidden shrink-0">
             {member.profileImageUrl ? (
               <img
                 src={member.profileImageUrl}
@@ -351,19 +355,19 @@ function MemberCell({ member, clip, onOpenClip, aspectClass, style, isMe, canRec
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-xs text-[#98989d] font-medium">
+              <span className="text-xs text-[#8B4A26] font-medium">
                 {member.nickname?.[0] ?? "?"}
               </span>
             )}
           </div>
-          <span className="text-[10px] text-[#c7c7cc]">{member.nickname}</span>
+          <span className="text-[10px] text-[#A2977F]">{member.nickname}</span>
         </div>
 
         {showRecordButton && (
           <button
             onClick={onRecord}
             aria-label="지금 셋로그 촬영하기"
-            className="w-6 h-6 rounded-full bg-[#6F4A2C] flex items-center justify-center mt-0.5"
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-[#A45B2C] to-[#7A3D1C] flex items-center justify-center mt-0.5 shadow-sm shadow-[#8B4A26]/35 gs-press gs-float"
           >
             <PlusIcon />
           </button>
@@ -375,7 +379,7 @@ function MemberCell({ member, clip, onOpenClip, aspectClass, style, isMe, canRec
   return (
     <button
       onClick={() => onOpenClip(clip)}
-      className={`${aspectClass ?? ""} w-full rounded-lg relative overflow-hidden bg-[#1c1c1e]`}
+      className={`${aspectClass ?? ""} w-full rounded-lg relative overflow-hidden bg-[#2A2420] ring-1 ring-[#8B4A26]/25 gs-press`}
       style={style}
     >
       {clip.videoUrl && (
@@ -389,7 +393,7 @@ function MemberCell({ member, clip, onOpenClip, aspectClass, style, isMe, canRec
         />
       )}
       <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/45 rounded-full pr-2 pl-0.5 py-0.5">
-        <div className="w-4 h-4 rounded-full bg-[#e5e5ea] flex items-center justify-center overflow-hidden shrink-0">
+        <div className="w-4 h-4 rounded-full bg-[#E6DDCD] flex items-center justify-center overflow-hidden shrink-0">
           {member.profileImageUrl ? (
             <img
               src={member.profileImageUrl}
@@ -397,7 +401,7 @@ function MemberCell({ member, clip, onOpenClip, aspectClass, style, isMe, canRec
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-[7px] text-[#6e6e73] font-medium">
+            <span className="text-[7px] text-[#6B6156] font-medium">
               {member.nickname?.[0] ?? "?"}
             </span>
           )}
@@ -419,7 +423,7 @@ function PlusIcon() {
 function ChevronLeftIcon({ size = 14 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M15 19l-7-7 7-7" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 19l-7-7 7-7" stroke="#2A2420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -427,7 +431,7 @@ function ChevronLeftIcon({ size = 14 }) {
 function ChevronRightIcon({ size = 14 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M9 5l7 7-7 7" stroke="#1c1c1e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 5l7 7-7 7" stroke="#2A2420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

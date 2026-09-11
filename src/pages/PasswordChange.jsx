@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { changeMyPassword } from "../api/member";
 
 const inputClass =
-  "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors";
+  "w-full h-11 rounded-[10px] bg-[#F4EFE6] border border-[#E6DDCD] px-3.5 text-[13px] text-[#2A2420] placeholder-[#8C8274] outline-none focus:border-[#8B4A26] transition-colors";
 
 export default function PasswordChange() {
   const navigate = useNavigate();
@@ -43,33 +43,33 @@ export default function PasswordChange() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white px-6 py-8">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4] px-6 py-8">
       <div className="w-full max-w-sm mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#2A2420]"
             aria-label="뒤로가기"
           >
             <ArrowLeftIcon />
           </button>
-          <p className="text-base font-medium text-[#1c1c1e]">비밀번호 재설정</p>
+          <p className="text-base font-medium text-[#2A2420]">비밀번호 재설정</p>
         </div>
 
         {done ? (
           <div className="flex flex-col items-center pt-10">
-            <div className="w-14 h-14 rounded-full bg-[#e6f4ea] flex items-center justify-center mb-4">
+            <div className="w-14 h-14 rounded-full bg-[#E7F0E2] flex items-center justify-center mb-4">
               <CheckIcon />
             </div>
-            <p className="text-sm font-medium text-[#1c1c1e] mb-1.5">
+            <p className="text-sm font-medium text-[#2A2420] mb-1.5">
               비밀번호가 변경됐어요
             </p>
-            <p className="text-xs text-[#98989d] mb-8">
+            <p className="text-xs text-[#8C8274] mb-8">
               다음 로그인부터 새 비밀번호를 사용해주세요
             </p>
             <button
               onClick={() => navigate("/mypage", { replace: true })}
-              className="w-full h-12 rounded-xl bg-[#6F4A2C] text-white text-sm font-medium"
+              className="w-full h-12 rounded-xl bg-[#8B4A26] text-white text-sm font-medium gs-press"
             >
               마이페이지로 돌아가기
             </button>
@@ -78,7 +78,7 @@ export default function PasswordChange() {
           <>
             <div className="flex flex-col gap-4">
               <div>
-                <p className="text-xs text-[#6e6e73] mb-1.5">현재 비밀번호</p>
+                <p className="text-xs text-[#6B6156] mb-1.5">현재 비밀번호</p>
                 <input
                   type="password"
                   value={currentPassword}
@@ -89,7 +89,7 @@ export default function PasswordChange() {
               </div>
 
               <div>
-                <p className="text-xs text-[#6e6e73] mb-1.5">새 비밀번호</p>
+                <p className="text-xs text-[#6B6156] mb-1.5">새 비밀번호</p>
                 <input
                   type="password"
                   value={newPassword}
@@ -105,7 +105,7 @@ export default function PasswordChange() {
               </div>
 
               <div>
-                <p className="text-xs text-[#6e6e73] mb-1.5">새 비밀번호 확인</p>
+                <p className="text-xs text-[#6B6156] mb-1.5">새 비밀번호 확인</p>
                 <input
                   type="password"
                   value={newPasswordConfirm}
@@ -128,8 +128,8 @@ export default function PasswordChange() {
               disabled={!canSubmit || submitting}
               className={`w-full h-12 rounded-xl text-sm font-medium mt-8 transition-colors ${
                 canSubmit && !submitting
-                  ? "bg-[#6F4A2C] text-white hover:bg-[#5c3d24]"
-                  : "bg-[#e5e5ea] text-[#98989d]"
+                  ? "bg-[#8B4A26] text-white hover:bg-[#6B3618]"
+                  : "bg-[#E6DDCD] text-[#8C8274]"
               }`}
             >
               {submitting ? "변경 중..." : "비밀번호 변경"}
@@ -146,7 +146,7 @@ function ArrowLeftIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path
         d="M15 19l-7-7 7-7"
-        stroke="#1c1c1e"
+        stroke="#2A2420"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -160,7 +160,7 @@ function CheckIcon() {
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
       <path
         d="M5 13l4.5 4.5L19 7.5"
-        stroke="#1f8b3f"
+        stroke="#3F7A47"
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"

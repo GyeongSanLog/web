@@ -8,12 +8,12 @@ import {
 } from "../api/auth";
 
 const inputClass =
-  "w-full h-11 rounded-[10px] bg-[#f5f5f7] border border-[#e5e5ea] px-3.5 text-[13px] text-[#1c1c1e] placeholder-[#98989d] outline-none focus:border-[#6F4A2C] transition-colors";
+  "w-full h-11 rounded-[10px] bg-[#F4EFE6] border border-[#E6DDCD] px-3.5 text-[13px] text-[#2A2420] placeholder-[#8C8274] outline-none focus:border-[#8B4A26] transition-colors";
 
 function Field({ label, children }) {
   return (
     <div>
-      <p className="text-xs text-[#6e6e73] mb-1.5">{label}</p>
+      <p className="text-xs text-[#6B6156] mb-1.5">{label}</p>
       {children}
     </div>
   );
@@ -198,29 +198,29 @@ export default function Signup() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white flex justify-center px-6 py-8">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4] flex justify-center px-6 py-8">
       <div className="w-full max-w-sm">
 
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate("/login")}
-            className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#2A2420]"
             aria-label="뒤로가기"
           >
             ←
           </button>
-          <p className="text-base font-medium text-[#1c1c1e]">회원가입</p>
+          <p className="text-base font-medium text-[#2A2420]">회원가입</p>
         </div>
 
         <div className="flex flex-col items-center mb-8">
           <button
             onClick={() => console.log("프로필 사진 업로드 TODO")}
-            className="w-20 h-20 rounded-full bg-[#f5f5f7] border border-dashed border-[#c7c7cc] flex items-center justify-center text-2xl text-[#98989d]"
+            className="w-20 h-20 rounded-full bg-[#F4EFE6] border border-dashed border-[#C6B9A4] flex items-center justify-center text-2xl text-[#8C8274]"
             aria-label="프로필 사진 추가"
           >
             +
           </button>
-          <p className="mt-2 text-xs text-[#98989d]">프로필 사진 (선택)</p>
+          <p className="mt-2 text-xs text-[#8C8274]">프로필 사진 (선택)</p>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -247,8 +247,8 @@ export default function Signup() {
                 disabled={checkingNickname || !form.nickname.trim()}
                 className={`shrink-0 px-4 rounded-[10px] text-xs font-medium disabled:opacity-50 ${
                   nicknameConfirmed
-                    ? "bg-[#e6f4ea] text-[#1f8b3f]"
-                    : "bg-[#6F4A2C] text-white"
+                    ? "bg-[#E7F0E2] text-[#3F7A47]"
+                    : "bg-[#8B4A26] text-white"
                 }`}
               >
                 {checkingNickname
@@ -264,7 +264,7 @@ export default function Signup() {
               </p>
             )}
             {nicknameConfirmed && (
-              <p className="mt-1 text-xs text-[#1f8b3f]">
+              <p className="mt-1 text-xs text-[#3F7A47]">
                 사용 가능한 닉네임이에요
               </p>
             )}
@@ -290,8 +290,8 @@ export default function Signup() {
                 }
                 className={`shrink-0 px-4 rounded-[10px] text-xs font-medium disabled:opacity-50 ${
                   emailVerified
-                    ? "bg-[#e6f4ea] text-[#1f8b3f]"
-                    : "bg-[#6F4A2C] text-white"
+                    ? "bg-[#E7F0E2] text-[#3F7A47]"
+                    : "bg-[#8B4A26] text-white"
                 }`}
               >
                 {emailVerified
@@ -328,7 +328,7 @@ export default function Signup() {
                   <button
                     onClick={handleVerifyCode}
                     disabled={verifyingCode || !code.trim() || validRemaining <= 0}
-                    className="shrink-0 px-4 rounded-[10px] text-xs font-medium bg-[#6F4A2C] text-white disabled:opacity-50"
+                    className="shrink-0 px-4 rounded-[10px] text-xs font-medium bg-[#8B4A26] text-white disabled:opacity-50 gs-press"
                   >
                     {verifyingCode ? "확인 중..." : "확인"}
                   </button>
@@ -345,7 +345,7 @@ export default function Signup() {
               <p className="mt-1 text-xs text-[#d70015]">{emailError}</p>
             )}
             {emailVerified && (
-              <p className="mt-1 text-xs text-[#1f8b3f]">
+              <p className="mt-1 text-xs text-[#3F7A47]">
                 이메일 인증이 완료됐어요
               </p>
             )}
@@ -390,8 +390,8 @@ export default function Signup() {
           disabled={submitting}
           className={`w-full h-12 rounded-xl text-sm font-medium mt-8 transition-colors ${
             canSubmit && !submitting
-              ? "bg-[#6F4A2C] text-white hover:bg-[#5c3d24]"
-              : "bg-[#e5e5ea] text-[#98989d]"
+              ? "bg-[#8B4A26] text-white hover:bg-[#6B3618]"
+              : "bg-[#E6DDCD] text-[#8C8274]"
           }`}
         >
           {submitting ? "가입 처리 중..." : "가입 완료"}

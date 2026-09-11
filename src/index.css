@@ -1,3 +1,9 @@
+/* 브랜드 서체(고운바탕) - 앱 전체가 아니라 .font-brand 를 붙인 곳(헤더 워드마크,
+   로그인 타이틀, 섹션 제목)에만 좁게 적용한다.
+   주의: 이 @import 는 반드시 `@import "tailwindcss"` 보다 위에 있어야 한다.
+   (Vite/Lightning CSS 는 @import 가 다른 규칙 뒤에 오면 빌드 에러를 낸다) */
+@import url("https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap");
+
 @import "tailwindcss";
 
 /* Tailwind Preflight가 버튼 커서를 기본값(화살표)으로 되돌리는 걸 다시 pointer로 복구 */
@@ -132,8 +138,8 @@
   margin-bottom: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #ffffff;
-  color: #1c1c1e;
+  background: #FFFCF6;
+  color: #2A2420;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -149,7 +155,7 @@
   margin-left: -44px;
   margin-top: -44px;
   border-radius: 999px;
-  background: rgba(111, 74, 44, 0.28);
+  background: rgba(139, 74, 38, 0.28);
   animation: gs-land-ripple 1400ms ease-out 500ms 2 both;
 }
 
@@ -183,4 +189,131 @@
   .gs-launch, .gs-pin-drop, .gs-sheet-up, .gs-name-pop, .gs-burst {
     animation-duration: 1ms !important;
   }
+}
+
+/* ============================================================
+   공통 모션 / 자연 질감 유틸 (앱 전역)
+   ------------------------------------------------------------
+   위쪽 gs-* 키프레임이 "지도 뽑기 연출" 전용이라면, 아래는 모든
+   화면에서 재사용하는 기본 사용감 세트다.
+     · 진입    : gs-rise / gs-rise-sm / gs-scale-in / gs-stagger
+     · 로딩    : gs-skeleton (회색 깜빡임 대신 따뜻한 결이 흐름)
+     · 상호작용: gs-press (누르면 살짝 눌림) / gs-tab-pop
+     · 분위기  : gs-float / gs-sway / gs-sun (해·잎사귀 장식용)
+   ============================================================ */
+
+@keyframes gs-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gs-rise-sm {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gs-scale-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* 스켈레톤: 종이 위로 빛이 훑고 지나가는 느낌 */
+@keyframes gs-shimmer {
+  from { background-position: 220% 0; }
+  to   { background-position: -120% 0; }
+}
+
+/* 잎사귀·아이콘이 천천히 떠 있는 느낌 */
+@keyframes gs-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+/* 바람에 흔들리는 느낌 */
+@keyframes gs-sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50%      { transform: rotate(5deg); }
+}
+/* 해가 아주 느리게 도는 느낌 (로고/장식용) */
+@keyframes gs-sun {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 하단 탭을 눌렀을 때 아이콘이 통 튀어오름 */
+@keyframes gs-tab-pop {
+  0%   { transform: translateY(0) scale(1); }
+  42%  { transform: translateY(-3.5px) scale(1.16); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* 섹션 제목 밑 강조선이 좌→우로 그어짐 */
+@keyframes gs-draw {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@layer utilities {
+  .gs-rise      { animation: gs-rise 480ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+  .gs-rise-sm   { animation: gs-rise-sm 380ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+  .gs-scale-in  { animation: gs-scale-in 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+  .gs-float     { animation: gs-float 4200ms ease-in-out infinite; }
+  .gs-sway      { animation: gs-sway 3400ms ease-in-out infinite; }
+  .gs-sun       { animation: gs-sun 26s linear infinite; transform-origin: center; }
+  .gs-tab-pop   { animation: gs-tab-pop 440ms cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+  .gs-draw      { animation: gs-draw 520ms cubic-bezier(0.2, 0.8, 0.25, 1) both; transform-origin: left; }
+
+  /* 컨테이너에 붙이면 직계 자식들이 차례로 올라온다 (목록/그리드용) */
+  .gs-stagger > * { animation: gs-rise-sm 420ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+  .gs-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+  .gs-stagger > *:nth-child(2)  { animation-delay: 45ms; }
+  .gs-stagger > *:nth-child(3)  { animation-delay: 90ms; }
+  .gs-stagger > *:nth-child(4)  { animation-delay: 135ms; }
+  .gs-stagger > *:nth-child(5)  { animation-delay: 180ms; }
+  .gs-stagger > *:nth-child(6)  { animation-delay: 225ms; }
+  .gs-stagger > *:nth-child(7)  { animation-delay: 270ms; }
+  .gs-stagger > *:nth-child(8)  { animation-delay: 315ms; }
+  .gs-stagger > *:nth-child(9)  { animation-delay: 360ms; }
+  .gs-stagger > *:nth-child(n + 10) { animation-delay: 400ms; }
+
+  /* 누르면 살짝 들어가는 촉감 - 버튼/카드 어디에나 */
+  .gs-press {
+    transition: transform 150ms cubic-bezier(0.2, 0.8, 0.3, 1),
+                box-shadow 150ms ease,
+                background-color 150ms ease,
+                border-color 150ms ease;
+  }
+  .gs-press:active:not(:disabled) { transform: scale(0.972); }
+
+  .font-brand { font-family: "Gowun Batang", "Nanum Myeongjo", serif; }
+
+  /* 한지 결 - 아주 옅은 얼룩 두 겹. 배경색 위에 얹어 쓴다 */
+  .gs-paper {
+    background-image:
+      radial-gradient(ellipse 60% 40% at 12% 8%,  rgba(139, 74, 38, 0.045), transparent 60%),
+      radial-gradient(ellipse 50% 45% at 88% 22%, rgba(75, 107, 78, 0.045), transparent 62%),
+      radial-gradient(ellipse 70% 35% at 50% 100%, rgba(232, 183, 105, 0.06), transparent 65%);
+  }
+}
+
+/* 회색 깜빡임(animate-pulse) 대신 쓰는 따뜻한 스켈레톤 */
+.gs-skeleton {
+  background-color: #F4EFE6;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.75) 45%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: gs-shimmer 1500ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gs-float, .gs-sway, .gs-sun, .gs-skeleton {
+    animation: none !important;
+  }
+  .gs-rise, .gs-rise-sm, .gs-scale-in, .gs-tab-pop, .gs-draw, .gs-stagger > * {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+  .gs-press:active:not(:disabled) { transform: none; }
 }

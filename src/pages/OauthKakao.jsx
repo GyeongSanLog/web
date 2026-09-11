@@ -47,19 +47,19 @@ export default function OauthKakao() {
   }, [navigate]);
 
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-white px-6">
+    <div className="h-full flex flex-col items-center justify-center bg-[#FDFAF4] px-6">
       {error ? (
         <>
           <p className="text-sm text-[#d70015] mb-4 text-center">{error}</p>
           <button
             onClick={() => navigate("/login", { replace: true })}
-            className="text-sm text-[#6F4A2C] font-medium"
+            className="text-sm text-[#8B4A26] font-medium"
           >
             로그인 화면으로 돌아가기
           </button>
         </>
       ) : (
-        <p className="text-sm text-[#6e6e73]">카카오 로그인 처리 중...</p>
+        <p className="text-sm text-[#6B6156]">카카오 로그인 처리 중...</p>
       )}
     </div>
   );

@@ -21,39 +21,39 @@ export default function AccountDelete() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-white px-6 py-8">
+    <div className="h-full overflow-y-auto bg-[#FDFAF4] px-6 py-8">
       <div className="w-full max-w-sm mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-[#F4EFE6] flex items-center justify-center text-[#2A2420]"
             aria-label="뒤로가기"
           >
             <ArrowLeftIcon />
           </button>
-          <p className="text-base font-medium text-[#1c1c1e]">회원 탈퇴</p>
+          <p className="text-base font-medium text-[#2A2420]">회원 탈퇴</p>
         </div>
 
         <div className="flex flex-col items-center pt-4 pb-8">
           <div className="w-14 h-14 rounded-full bg-[#fdecea] flex items-center justify-center mb-4">
             <WarnIcon />
           </div>
-          <p className="text-sm font-medium text-[#1c1c1e] mb-1.5">
+          <p className="text-sm font-medium text-[#2A2420] mb-1.5">
             정말 탈퇴하시겠어요?
           </p>
-          <p className="text-xs text-[#98989d] text-center leading-relaxed">
+          <p className="text-xs text-[#8C8274] text-center leading-relaxed">
             탈퇴하면 계정 정보가 삭제되고{"\n"}복구할 수 없어요
           </p>
         </div>
 
-        <ul className="rounded-2xl bg-[#f5f5f7] border border-[#e5e5ea] px-4 py-4 mb-8 flex flex-col gap-2">
-          <li className="text-xs text-[#6e6e73]">· 저장된 셋로그와 사진이 모두 삭제돼요</li>
-          <li className="text-xs text-[#6e6e73]">· 참여 중인 여행 그룹에서 자동으로 나가져요</li>
-          <li className="text-xs text-[#6e6e73]">· 같은 이메일로는 다시 가입할 수 있어요</li>
+        <ul className="rounded-2xl bg-[#F4EFE6] border border-[#E6DDCD] px-4 py-4 mb-8 flex flex-col gap-2">
+          <li className="text-xs text-[#6B6156]">· 저장된 셋로그와 사진이 모두 삭제돼요</li>
+          <li className="text-xs text-[#6B6156]">· 참여 중인 여행 그룹에서 자동으로 나가져요</li>
+          <li className="text-xs text-[#6B6156]">· 같은 이메일로는 다시 가입할 수 있어요</li>
         </ul>
 
         {notice && (
-          <p className="text-xs text-[#6F4A2C] text-center mb-4">{notice}</p>
+          <p className="text-xs text-[#8B4A26] text-center mb-4">{notice}</p>
         )}
 
         <button
@@ -65,7 +65,7 @@ export default function AccountDelete() {
         </button>
         <button
           onClick={() => navigate(-1)}
-          className="w-full h-12 rounded-xl bg-[#f5f5f7] text-[#1c1c1e] text-sm font-medium"
+          className="w-full h-12 rounded-xl bg-[#F4EFE6] text-[#2A2420] text-sm font-medium"
         >
           취소
         </button>
@@ -79,7 +79,7 @@ function ArrowLeftIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path
         d="M15 19l-7-7 7-7"
-        stroke="#1c1c1e"
+        stroke="#2A2420"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
