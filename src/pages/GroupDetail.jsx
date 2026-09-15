@@ -10,6 +10,14 @@ import {
 import { fetchMyInfo } from "../api/member";
 import SlotGrid from "../components/SlotGrid";
 import SectionTitle from "../components/SectionTitle";
+import {
+  TRIP_BEFORE,
+  TRIP_ENDED,
+  getTripStatus,
+  formatSlotLabel,
+  formatShortDate,
+  formatShortDateTime,
+} from "../utils/trip";
 
 export default function GroupDetail() {
   const { groupId } = useParams();
@@ -21,6 +29,7 @@ export default function GroupDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState("");
@@ -44,8 +53,6 @@ export default function GroupDetail() {
       fetchMyLetters(groupId),
     ])
       .then(([infoRes, myInfoRes, clipsRes, lettersRes]) => {
-        console.log("[GroupDetail] fetchGroupInfo 응답", infoRes);
-        console.log("[GroupDetail] fetchGroupClips 응답", clipsRes);
         setInfo(infoRes);
         setMyId(myInfoRes.id);
         setClips(clipsRes ?? []);
@@ -63,13 +70,23 @@ export default function GroupDetail() {
 
   function handleCopyInviteCode() {
     if (!info?.inviteCode) return;
+    setCopyFailed(false);
+
+    // clipboard API는 https가 아니거나 브라우저가 막으면 아예 없을 수 있음.
+    // 예전엔 실패해도 console.error만 찍어서, 사용자는 "복사됨!"이 안 뜨는
+    // 것만 보고 이유를 알 수 없었음 → 코드를 직접 복사할 수 있게 안내.
+    if (!navigator.clipboard?.writeText) {
+      setCopyFailed(true);
+      return;
+    }
+
     navigator.clipboard
       .writeText(info.inviteCode)
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       })
-      .catch((err) => console.error("초대코드 복사 실패:", err));
+      .catch(() => setCopyFailed(true));
   }
 
   async function handleWithdraw() {
@@ -80,7 +97,10 @@ export default function GroupDetail() {
       await withdrawFromGroup(groupId);
       navigate("/gallery");
     } catch (err) {
-      console.error("그룹 탈퇴 실패:", err);
+      if (err.message === "AUTH_EXPIRED") {
+        navigate("/login");
+        return;
+      }
       setWithdrawError(err.message || "그룹 탈퇴에 실패했어요");
       setWithdrawing(false);
     }
@@ -88,7 +108,7 @@ export default function GroupDetail() {
 
   async function handleOpenLetter(letterId) {
     // 여행 종료 전에는 버튼 자체가 화면에 없지만, 방어적으로 한 번 더 체크
-    if (info && new Date(info.endAt) >= new Date()) return;
+    if (!info || getTripStatus(info.startAt, info.endAt) !== TRIP_ENDED) return;
 
     setOpenLetterId(letterId);
     setOpenLetterContent(null);
@@ -97,7 +117,6 @@ export default function GroupDetail() {
       const detail = await fetchLetter(groupId, letterId);
       setOpenLetterContent(detail);
     } catch (err) {
-      console.error("편지 조회 실패:", err);
       setOpenLetterContent({ error: err.message || "편지를 불러올 수 없어요" });
     } finally {
       setLoadingLetterContent(false);
@@ -129,118 +148,141 @@ export default function GroupDetail() {
   }
 
   const members = info.members ?? [];
-  // 그룹 종료일이 지났는지 여부 - 편지 공개 조건으로 사용
-  const isGroupEnded = new Date(info.endAt) < new Date();
+  // 여행 상태(시작 전 / 진행 중 / 종료됨) - SlotGrid와 동일한 기준(utils/trip)
+  const tripStatus = getTripStatus(info.startAt, info.endAt);
+  const isTripEnded = tripStatus === TRIP_ENDED;
 
   return (
-    <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-8 relative">
-      <div className="px-5 pt-6">
+    // 바깥 래퍼는 스크롤하지 않고 "위치 기준"만 잡는다 (relative).
+    // 스크롤은 안쪽 div가 담당하고, 모달들은 스크롤 컨테이너 바깥에 형제로 둔다.
+    //
+    // 왜 이렇게 바꿨나: 예전엔 스크롤 컨테이너 자체가 relative였고 모달이
+    // 그 안의 absolute inset-0이었음. overflow-auto 안의 absolute 요소는
+    // 콘텐츠와 함께 스크롤되므로, 페이지 맨 아래에 있는 "그룹 탈퇴하기"를
+    // 누르면 확인 모달이 저 위쪽에 렌더링돼서 아무 반응 없는 것처럼 보였음.
+    <div className="h-full relative">
+      <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-8">
+        <div className="px-5 pt-6">
 
-        {/* 헤더 */}
-        <div className="flex items-center gap-2.5 mb-3">
-          <button
-            onClick={() => navigate("/gallery")}
-            className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center shrink-0 gs-press"
-            aria-label="뒤로가기"
-          >
-            <ArrowLeftIcon />
-          </button>
-          <div>
-            <p className="font-brand text-[18px] font-bold text-[#2A2420]">{info.name}</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] text-[#8C8274]">
-                {formatShortDate(info.startAt)} ~ {formatShortDate(info.endAt)} · {members.length}명 참여
-              </p>
-              <MemberAvatars members={members} />
+          {/* 헤더 */}
+          <div className="flex items-center gap-2.5 mb-3">
+            <button
+              onClick={() => navigate("/gallery")}
+              className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center shrink-0 gs-press"
+              aria-label="뒤로가기"
+            >
+              <ArrowLeftIcon />
+            </button>
+            <div>
+              <p className="font-brand text-[18px] font-bold text-[#2A2420]">{info.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-[11px] text-[#8C8274]">
+                  {formatShortDate(info.startAt)} ~ {formatShortDate(info.endAt)} · {members.length}명 참여
+                </p>
+                <MemberAvatars members={members} />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 초대코드 */}
-        <button
-          onClick={handleCopyInviteCode}
-          className="w-full flex items-center justify-between bg-gradient-to-r from-[#F8EEDC] to-[#F3E5CC] border border-[#EBDCC4] rounded-2xl px-3.5 py-3 mb-6 gs-press gs-rise"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#6B6156]">초대코드</span>
-            <span className="text-[13px] font-medium text-[#2A2420] tracking-wide">
-              {info.inviteCode}
+          {/* 초대코드 */}
+          <button
+            onClick={handleCopyInviteCode}
+            className="w-full flex items-center justify-between bg-gradient-to-r from-[#F8EEDC] to-[#F3E5CC] border border-[#EBDCC4] rounded-2xl px-3.5 py-3 gs-press gs-rise"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-[#6B6156]">초대코드</span>
+              <span className="text-[13px] font-medium text-[#2A2420] tracking-wide select-all">
+                {info.inviteCode}
+              </span>
+            </div>
+            <span className="text-[11px] text-[#8B4A26] font-medium">
+              {copied ? "복사됨!" : "복사하기"}
             </span>
+          </button>
+
+          {copyFailed ? (
+            <p className="text-[11px] text-[#8C8274] mt-2 mb-6 px-1">
+              자동 복사가 안 돼요. 위 코드를 길게 눌러 직접 복사해주세요.
+            </p>
+          ) : (
+            <div className="mb-6" />
+          )}
+
+          {/* 시간대별 셋로그 그리드 - 한 번에 한 시간대만, 멤버 수만큼 칸 표시 */}
+          <SlotGrid
+            startAt={info.startAt}
+            endAt={info.endAt}
+            members={members}
+            clips={clips}
+            myId={myId}
+            groupId={groupId}
+            onOpenClip={setOpenClip}
+          />
+
+          {/* 받은 편지 - 여행이 끝난 뒤에만 공개 */}
+          <div className="mt-7">
+            <SectionTitle tone="#B04A46">받은 편지</SectionTitle>
           </div>
-          <span className="text-[11px] text-[#8B4A26] font-medium">
-            {copied ? "복사됨!" : "복사하기"}
-          </span>
-        </button>
+          {!isTripEnded ? (
+            <div className="flex flex-col items-center gap-1.5 py-9 bg-[#F8F3E9] border border-[#EFE4D2] rounded-2xl">
+              <span className="w-11 h-11 rounded-full bg-[#F6ECDD] flex items-center justify-center gs-float">
+                <LockIcon />
+              </span>
+              <p className="text-xs text-[#6B6156] mt-1">
+                여행이 끝나면 편지를 확인할 수 있어요
+              </p>
+              <p className="text-[11px] text-[#8C8274]">
+                {/* 시작 전인 여행에 "진행중"이라고 뜨던 문구를 상태별로 분리 */}
+                {tripStatus === TRIP_BEFORE
+                  ? `${formatShortDate(info.startAt)}에 여행이 시작돼요`
+                  : `${formatShortDate(info.endAt)}까지 여행 진행중`}
+              </p>
+            </div>
+          ) : letters.length === 0 ? (
+            <p className="text-xs text-[#8C8274] py-4">아직 남겨진 편지가 없어요</p>
+          ) : (
+            <div className="flex flex-col gap-2 gs-stagger">
+              {letters.map((letter) => (
+                <button
+                  key={letter.letterId}
+                  onClick={() => handleOpenLetter(letter.letterId)}
+                  className="bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-3 flex items-center gap-2.5 text-left gs-press hover:bg-[#FBF5EA]"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#C2685C] to-[#9C4640] flex items-center justify-center text-xs text-white font-medium shrink-0">
+                    {letter.writerNickname?.[0] ?? "?"}
+                  </div>
+                  <div>
+                    <p className="text-xs text-[#2A2420]">{letter.writerNickname}님이 남긴 편지</p>
+                    <p className="text-[11px] text-[#8C8274] mt-0.5">
+                      {formatShortDateTime(letter.createdAt)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* 시간대별 셋로그 그리드 - 한 번에 한 시간대만, 멤버 수만큼 칸 표시 */}
-        <SlotGrid
-          startAt={info.startAt}
-          endAt={info.endAt}
-          members={members}
-          clips={clips}
-          myId={myId}
-          groupId={groupId}
-          onOpenClip={setOpenClip}
-        />
+          {/* 그룹 탈퇴 */}
+          <div className="h-px bg-gradient-to-r from-transparent via-[#DCCFB6] to-transparent mt-8 mb-4" />
+          <button
+            onClick={() => {
+              setWithdrawError("");
+              setShowWithdrawConfirm(true);
+            }}
+            className="text-[13px] text-[#d70015] font-medium"
+          >
+            그룹 탈퇴하기
+          </button>
 
-        {/* 받은 편지 - 그룹 종료일이 지나기 전까지는 비활성화 (여행 끝난 뒤에만 공개) */}
-        <div className="mt-7">
-          <SectionTitle tone="#B04A46">받은 편지</SectionTitle>
         </div>
-        {!isGroupEnded ? (
-          <div className="flex flex-col items-center gap-1.5 py-9 bg-[#F8F3E9] border border-[#EFE4D2] rounded-2xl">
-            <span className="w-11 h-11 rounded-full bg-[#F6ECDD] flex items-center justify-center gs-float">
-              <LockIcon />
-            </span>
-            <p className="text-xs text-[#6B6156] mt-1">
-              여행이 끝나면 편지를 확인할 수 있어요
-            </p>
-            <p className="text-[11px] text-[#8C8274]">
-              {formatShortDate(info.endAt)}까지 여행 진행중
-            </p>
-          </div>
-        ) : letters.length === 0 ? (
-          <p className="text-xs text-[#8C8274] py-4">아직 남겨진 편지가 없어요</p>
-        ) : (
-          <div className="flex flex-col gap-2 gs-stagger">
-            {letters.map((letter) => (
-              <button
-                key={letter.letterId}
-                onClick={() => handleOpenLetter(letter.letterId)}
-                className="bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-3 flex items-center gap-2.5 text-left gs-press hover:bg-[#FBF5EA]"
-              >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#C2685C] to-[#9C4640] flex items-center justify-center text-xs text-white font-medium shrink-0">
-                  {letter.writerNickname?.[0] ?? "?"}
-                </div>
-                <div>
-                  <p className="text-xs text-[#2A2420]">{letter.writerNickname}님이 남긴 편지</p>
-                  <p className="text-[11px] text-[#8C8274] mt-0.5">
-                    {formatShortDateTime(letter.createdAt)}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* 그룹 탈퇴 */}
-        <div className="h-px bg-gradient-to-r from-transparent via-[#DCCFB6] to-transparent mt-8 mb-4" />
-        <button
-          onClick={() => {
-            setWithdrawError("");
-            setShowWithdrawConfirm(true);
-          }}
-          className="text-[13px] text-[#d70015] font-medium"
-        >
-          그룹 탈퇴하기
-        </button>
-
       </div>
+
+      {/* --- 모달들: 스크롤 컨테이너 바깥에 둬서 항상 화면 정중앙에 뜨게 함 --- */}
 
       {/* 클립 재생 모달 */}
       {openClip && (
         <div
-          className="absolute inset-0 bg-[#1A1008]/75 flex items-center justify-center px-8 z-10 gs-fade-in"
+          className="absolute inset-0 bg-[#1A1008]/75 flex items-center justify-center px-8 z-20 gs-fade-in"
           onClick={() => setOpenClip(null)}
         >
           <div
@@ -264,8 +306,10 @@ export default function GroupDetail() {
               )}
             </div>
             <div className="flex items-center justify-between mt-3 px-1">
+              {/* 며칠짜리 여행에서 "17:00"만 보이면 몇 일인지 알 수 없어서
+                  그리드 라벨과 같은 "9.2 17:00" 형식으로 통일 */}
               <p className="text-[13px] text-white">
-                {openClip.nickname} · {slotIndexToTimeLabel(openClip.slotIndex)}
+                {openClip.nickname} · {formatSlotLabel(info.startAt, openClip.slotIndex)}
               </p>
               <button
                 onClick={() => setOpenClip(null)}
@@ -284,7 +328,7 @@ export default function GroupDetail() {
       {/* 편지 내용 모달 */}
       {openLetterId && (
         <div
-          className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-10 gs-fade-in"
+          className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-20 gs-fade-in"
           onClick={() => setOpenLetterId(null)}
         >
           <div
@@ -320,7 +364,7 @@ export default function GroupDetail() {
 
       {/* 탈퇴 확인 모달 */}
       {showWithdrawConfirm && (
-        <div className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-10 gs-fade-in">
+        <div className="absolute inset-0 bg-[#2A1A0C]/45 flex items-center justify-center px-8 z-20 gs-fade-in">
           <div className="w-full bg-[#FFFCF6] border border-[#EBE0CE] rounded-2xl p-5 gs-scale-in">
             <p className="text-[15px] font-medium text-[#2A2420] mb-1.5">
               정말 탈퇴하시겠어요?
@@ -389,28 +433,6 @@ function MemberAvatars({ members }) {
       )}
     </div>
   );
-}
-
-function formatShortDate(dateStr) {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
-}
-
-function formatShortDateTime(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-/**
- * slotIndex를 "17:00" 같은 정시 라벨로 변환.
- * (SlotGrid.jsx의 slotIndexToDate와 동일한 가정을 씀 - 클립 재생
- * 모달에서 간단히 시간만 보여줄 때 쓰는 용도)
- */
-function slotIndexToTimeLabel(slotIndex) {
-  if (slotIndex == null) return "";
-  const hourOfDay = ((slotIndex % 24) + 24) % 24;
-  return `${String(hourOfDay).padStart(2, "0")}:00`;
 }
 
 /* --- 아이콘 --- */

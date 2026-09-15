@@ -3,6 +3,7 @@
 // ============================================================
 
 import { BASE_URL, setTokens, clearTokens, getRefreshToken } from "./client";
+import { clearNotificationStorage } from "../utils/notificationStorage";
 
 /**
  * 서버 에러 응답에서 메시지를 최대한 안전하게 뽑아내는 헬퍼.
@@ -101,6 +102,10 @@ export async function login({ email, password }) {
  * 서버 요청 성공 여부와 무관하게, 로컬에 저장된 토큰은 항상 지운다.
  * (서버 응답이 실패하더라도 클라이언트 쪽에서는 로그아웃된 것처럼 처리해야
  * 사용자가 로그아웃 버튼을 눌렀는데 계속 로그인 상태로 남는 걸 방지할 수 있음)
+ *
+ * 알림 목록/FCM 토큰 캐시도 같이 지운다 — 안 지우면 같은 브라우저의
+ * 다음 사용자가 이전 사용자의 알림을 보고, 토큰 캐시 때문에 자기 기기가
+ * 서버에 등록되지 않아 푸시를 못 받는다.
  */
 export async function logout() {
   const refreshToken = getRefreshToken();
@@ -120,6 +125,7 @@ export async function logout() {
   }
 
   clearTokens();
+  clearNotificationStorage();
 }
 
 /**
@@ -155,10 +161,8 @@ export async function reissueTokenManually() {
  * 프론트가 받은 카카오 인가 코드로 로그인한다.
  * 가입 이력이 없으면 자동으로 가입 후 토큰을 발급한다.
  *
- * 주의: 아직 카카오 개발자 콘솔에 앱 등록 전이라, authCode를 실제로
- * 받아올 방법이 없음. 카카오 앱 등록 + JavaScript 키 발급 +
- * 카카오 JS SDK 연동(Kakao.Auth.authorize 등)이 먼저 필요함.
- * 이 함수는 authCode를 받아서 서버에 전달하는 부분만 미리 구현해둔 것.
+ * authCode는 utils/kakao.js의 startKakaoLogin() → 카카오 리다이렉트 →
+ * pages/OauthKakao.jsx 흐름으로 받아온다.
  *
  * Request body: { authCode, redirectUrl }
  *   redirectUrl은 카카오 인가 코드를 받을 때 사용한 redirect_uri와

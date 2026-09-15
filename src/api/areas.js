@@ -13,9 +13,12 @@
 //   전부 authFetch로 호출함
 // - 상세 응답에 name/category가 이미 포함되어 있어서, 예전처럼
 //   목록 데이터와 id로 매칭해 _display를 만들어 붙이던 방식이 필요 없어짐
-// - 키워드 검색 파라미터가 없음 (type 카테고리 필터만 지원).
-//   Search.jsx의 키워드 검색 기능은 이번엔 제외 — 백엔드에 추가 요청 필요.
 // - 찜 토글/찜 목록, 추천, 랜덤 조회는 기존에 없던 신규 기능
+//
+// [2026-09 업데이트] 백엔드에 키워드 검색 API가 추가됨.
+//   GET /api/area/search (keyword + type, 둘 다 옵션, 둘 다 주면 AND)
+//   → Search.jsx의 "전체 목록 받아서 프론트에서 filter" 임시 구현은 폐기.
+//   → searchAreas() 사용.
 // ============================================================
 
 import { BASE_URL, authFetch } from "./client";
@@ -54,6 +57,18 @@ export const AREA_TYPE_LABELS = {
 };
 
 /**
+ * 한글 라벨 → enum 역방향 매핑.
+ * 사용자는 화면에서 "문화시설"을 고르지만 서버에는 "CULTURAL"을 보내야 하므로,
+ * 위 AREA_TYPE_LABELS를 뒤집어서 자동으로 만들어 둠.
+ * (직접 손으로 또 적으면 나중에 한쪽만 고쳐서 어긋나기 쉬움)
+ *
+ *   AREA_TYPE_BY_LABEL["문화시설"] // → "CULTURAL"
+ */
+export const AREA_TYPE_BY_LABEL = Object.fromEntries(
+  Object.entries(AREA_TYPE_LABELS).map(([value, label]) => [label, value])
+);
+
+/**
  * 쿼리스트링 조립 헬퍼 (page/size/sort 조합이 여러 함수에서 반복돼서 분리함)
  */
 function buildListParams({ page = 0, size = 20, sort, type } = {}) {
@@ -72,11 +87,10 @@ function buildListParams({ page = 0, size = 20, sort, type } = {}) {
  * GET /api/area — 경산시 관광지를 페이지 단위로 조회. type을 주면 해당 유형만 조회.
  * 인증 필요 → authFetch 사용
  *
- * 주의: 키워드 검색 파라미터 없음. type(카테고리) 필터만 가능.
- *
  * Response 200: SliceResponsePlaceListResponse
  *   { content: PlaceListResponse[], page, size, hasNext }
- *   PlaceListResponse: { id, name, address, imageUrl, category }
+ *   PlaceListResponse:
+ *     { id, name, address, imageUrl, category, eventStartDate, eventEndDate }
  */
 export async function fetchAreaList({ type, page = 0, size = 20, sort } = {}) {
   const params = buildListParams({ page, size, sort, type });
@@ -85,6 +99,41 @@ export async function fetchAreaList({ type, page = 0, size = 20, sort } = {}) {
   if (!res.ok) {
     if (res.status === 401) throw new Error("AUTH_EXPIRED");
     throw new Error(await extractErrorMessage(res, "관광지 목록 조회에 실패했습니다"));
+  }
+
+  return res.json(); // { content, page, size, hasNext }
+}
+
+/**
+ * 관광지 검색
+ * GET /api/area/search — 이름(keyword)과 유형(type)으로 검색.
+ *   - 둘 다 옵션이고, 둘 다 주면 AND로 결합됨
+ *   - 둘 다 비우면 /api/area(전체 목록)와 사실상 같은 결과
+ * 인증 필요 → authFetch 사용
+ *
+ * 빈 문자열을 그대로 보내면 서버가 "이름이 빈 문자열인 곳"을 찾으려 할 수 있어서,
+ * trim 후 값이 있을 때만 파라미터를 붙인다.
+ *
+ * Response 200: SliceResponsePlaceListResponse (fetchAreaList와 동일 형태)
+ *   { content, page, size, hasNext }
+ */
+export async function searchAreas({
+  keyword,
+  type,
+  page = 0,
+  size = 20,
+  sort,
+} = {}) {
+  const params = buildListParams({ page, size, sort, type });
+
+  const trimmed = keyword?.trim();
+  if (trimmed) params.set("keyword", trimmed);
+
+  const res = await authFetch(`${BASE_URL}/api/area/search?${params.toString()}`);
+
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("AUTH_EXPIRED");
+    throw new Error(await extractErrorMessage(res, "검색에 실패했습니다"));
   }
 
   return res.json(); // { content, page, size, hasNext }
@@ -155,6 +204,33 @@ export async function fetchFavoriteAreas({ page = 0, size = 20, sort } = {}) {
   }
 
   return res.json(); // { content, page, size, hasNext }
+}
+
+/**
+ * 특정 관광지를 내가 찜했는지 확인
+ *
+ * ⚠️ 임시 구현. PlaceDetailResponse에 찜 여부 필드가 없어서(스웨거 확인)
+ * 찜 목록(GET /api/area/favorites)을 앞에서부터 훑어 id가 있는지 본다.
+ * 한 사람이 찜하는 개수가 수백 개를 넘을 일은 없다고 보고 100개씩 최대
+ * 3페이지(300개)까지만 확인한다. 그 이상이면 못 찾은 걸로 처리.
+ *
+ * 백엔드에 `favorited: boolean`을 상세 응답에 넣어달라고 요청하고,
+ * 추가되면 SpotDetail.jsx에서 이 함수 호출을 빼고 data.favorited를 쓰면 됨.
+ *
+ * 인증 필요 → 내부의 fetchFavoriteAreas가 authFetch 사용
+ */
+export async function isAreaFavorited(placeId) {
+  const targetId = Number(placeId);
+  const PAGE_SIZE = 100;
+  const MAX_PAGES = 3;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const res = await fetchFavoriteAreas({ page, size: PAGE_SIZE });
+    const content = res?.content ?? [];
+    if (content.some((p) => Number(p.id) === targetId)) return true;
+    if (!res?.hasNext) return false;
+  }
+  return false;
 }
 
 /**
