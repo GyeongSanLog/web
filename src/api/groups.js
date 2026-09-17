@@ -148,18 +148,23 @@ export async function fetchGroupList() {
 }
 
 /**
- * 갤러리 메인 조회 - 진행중인 여행 1개 + 지난 여행 목록
+ * 갤러리 메인 조회 - 진행중인 여행 1개 + 예정된 여행 + 지난 여행 목록
  *
- * 서버는 구분 없이 배열 하나만 주므로, 오늘 날짜 기준으로
- * 프론트에서 ongoing / past를 나눈다.
- * 진행중 판단 기준: startAt <= 오늘 <= endAt
- * (여러 개가 동시에 진행중이면 가장 최근에 시작한 것 1개만 ongoing으로,
- *  나머지는 past로 내려감 — 화면 구조상 ongoing은 1개만 표시되기 때문)
+ * 서버는 구분 없이 배열 하나만 주므로, 오늘 날짜 기준으로 프론트에서 나눈다.
+ *   ongoing  : startAt <= 지금 <= endAt  (여러 개면 가장 최근 시작한 1개만.
+ *              화면 구조상 진행중은 1개만 표시되기 때문에 나머지는 past로)
+ *   upcoming : 지금 < startAt            (아직 시작 전, 시작일 빠른 순)
+ *   past     : endAt < 지금 또는 ongoing에서 밀려난 것 (최근 시작 순)
+ *
+ * [수정 전 버그] 예전엔 ongoing이 아닌 걸 전부 past에 넣어서, 다음 주에
+ * 시작하는 여행이 "지난 여행 기록" 아래 그 달 섹션에 들어갔음.
  */
 export async function fetchGallery() {
   const groups = await fetchGroupList();
 
   const now = new Date();
+  const byStartDesc = (a, b) => new Date(b.startAt) - new Date(a.startAt);
+  const byStartAsc = (a, b) => new Date(a.startAt) - new Date(b.startAt);
 
   const ongoingCandidates = groups.filter((g) => {
     const start = new Date(g.startAt);
@@ -168,17 +173,18 @@ export async function fetchGallery() {
   });
 
   const ongoing =
-    ongoingCandidates.length > 0
-      ? ongoingCandidates.sort(
-          (a, b) => new Date(b.startAt) - new Date(a.startAt)
-        )[0]
-      : null;
+    ongoingCandidates.length > 0 ? [...ongoingCandidates].sort(byStartDesc)[0] : null;
 
+  const upcoming = groups
+    .filter((g) => now < new Date(g.startAt))
+    .sort(byStartAsc);
+
+  const upcomingIds = new Set(upcoming.map((g) => g.id));
   const past = groups
-    .filter((g) => !ongoing || g.id !== ongoing.id)
-    .sort((a, b) => new Date(b.startAt) - new Date(a.startAt));
+    .filter((g) => (!ongoing || g.id !== ongoing.id) && !upcomingIds.has(g.id))
+    .sort(byStartDesc);
 
-  return { ongoing, past };
+  return { ongoing, upcoming, past };
 }
 
 /**

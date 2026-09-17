@@ -6,6 +6,7 @@ import {
   fetchAreaDetail,
   toggleAreaFavorite,
   fetchAreaRecommendations,
+  isAreaFavorited,
 } from "../api/areas";
 import { categoryStyle } from "../utils/category";
 
@@ -20,23 +21,46 @@ export default function SpotDetail() {
   const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+
     fetchAreaDetail(id)
-      .then((data) => {
+      .then(async (data) => {
+        if (cancelled) return;
         setSpot(data);
-        // 서버가 찜 여부를 함께 내려주면 하트를 그 상태로 맞춘다.
-        // 스웨거의 PlaceDetailResponse에는 아직 이 필드가 없어서(추가 요청 필요)
-        // 필드가 없으면 false로 두고, 사용자가 누르는 순간부터만 반영된다.
-        setFavorited(Boolean(data?.favorited ?? data?.isFavorite ?? false));
+
+        // 찜 초기 상태.
+        // 서버가 상세 응답에 favorited를 넣어주면 그걸 쓰고, 없으면(현재 스웨거 기준)
+        // 찜 목록을 훑어서 확인한다. 예전엔 무조건 false로 시작해서, 찜한 곳에
+        // 다시 들어가면 빈 하트가 보였고 "어? 안 됐나" 하고 누르면 실제로는
+        // 찜이 해제되는 문제가 있었음.
+        if (data?.favorited != null || data?.isFavorite != null) {
+          setFavorited(Boolean(data.favorited ?? data.isFavorite));
+        } else {
+          try {
+            const fav = await isAreaFavorited(id);
+            if (!cancelled) setFavorited(fav);
+          } catch {
+            // 찜 여부 확인 실패는 화면 전체를 막을 일이 아니므로 false로 둔다
+            if (!cancelled) setFavorited(false);
+          }
+        }
       })
       .catch((err) => {
+        if (cancelled) return;
         if (err.message === "AUTH_EXPIRED") {
           navigate("/login");
           return;
         }
         setError(err.message);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, navigate]);
 
   // 같은 장소 기준 추천 3곳 - 상세 로드와 별개로 실패해도 화면 전체에 영향 없게 분리

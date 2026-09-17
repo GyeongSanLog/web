@@ -5,6 +5,7 @@ import AppHeader from "../components/AppHeader";
 import { fetchPopularAreas, fetchOngoingFestivals, fetchAreaList } from "../api/areas";
 import SectionTitle from "../components/SectionTitle";
 import { categoryStyle, rankStyle } from "../utils/category";
+import { useNotifications } from "../context/NotificationsContext";
 
 /**
  * 이름 매칭용 정규화 - 공백/대소문자 차이로 매칭이 실패하는 걸 줄임
@@ -42,6 +43,10 @@ export default function Home() {
 
   const [festivals, setFestivals] = useState([]);
   const [showAllFestivals, setShowAllFestivals] = useState(false); // 더보기 눌렀는지
+
+  // 종 아이콘에 안 읽은 알림 개수 뱃지를 표시하기 위함.
+  // (알림 자체는 아직 로컬에만 쌓임 — NotificationsContext 주석 참고)
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     // popular API(TourAPI 원본)는 imageUrl과 placeId를 주지 않아서,
@@ -102,10 +107,18 @@ export default function Home() {
         right={
           <button
             onClick={() => navigate("/notifications")}
-            className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center shrink-0 gs-press"
-            aria-label="알림"
+            className="relative w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center shrink-0 gs-press"
+            aria-label={unreadCount > 0 ? `알림, 안 읽은 알림 ${unreadCount}개` : "알림"}
           >
             <BellIcon />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#B04A46] text-white text-[9.5px] font-bold flex items-center justify-center"
+                aria-hidden="true"
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
         }
       />

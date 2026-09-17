@@ -3,6 +3,7 @@
 // ============================================================
 
 import { BASE_URL, authFetch, clearTokens, getRefreshToken } from "./client";
+import { clearNotificationStorage } from "../utils/notificationStorage";
 
 async function extractErrorMessage(res, fallback) {
   try {
@@ -94,10 +95,7 @@ export async function changeMyPassword({ currentPassword, newPassword }) {
  * PATCH /api/member/me/fcm-token — 푸시 알림을 받을 기기 토큰을 등록/갱신.
  * 로그인 후와 토큰 갱신 시 호출.
  *
- * 주의: 아직 Firebase 프로젝트 설정 전이라, fcmToken 값 자체를 얻어올
- * 방법이 없음. Firebase 프로젝트 생성 + FCM 웹 설정(VAPID 키 등) +
- * firebase.js 같은 초기화 파일이 먼저 필요함. 이 함수는 그 값을 받아서
- * 서버에 등록하는 부분만 미리 구현해둔 것.
+ * 토큰 발급은 src/firebase.js + context/NotificationsContext.jsx가 담당.
  *
  * Request body: { fcmToken }
  * Response 204: 등록 성공 (바디 없음)
@@ -146,4 +144,5 @@ export async function deleteMyAccount() {
 
   // 204라 응답 바디 없음 — json 파싱하지 않음
   clearTokens();
+  clearNotificationStorage();
 }
