@@ -24,9 +24,17 @@ export function getRefreshToken() {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
+/**
+ * 로그인/재발급으로 토큰이 저장될 때마다 발생하는 이벤트.
+ * NotificationsProvider가 이걸 듣고 FCM 토큰을 서버에 등록한다
+ * (앱 시작 시엔 토큰이 없어서 건너뛰고, 로그인 시점에 다시 시도해야 하므로).
+ */
+export const AUTH_CHANGED_EVENT = "gyeongsanlog:auth-changed";
+
 export function setTokens({ accessToken, refreshToken }) {
   if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 export function clearTokens() {
@@ -34,32 +42,53 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
+// 진행 중인 재발급 요청. 여러 API가 동시에 401을 받아도 재발급은 한 번만 한다.
+let reissuePromise = null;
+
 /**
  * POST /api/member/reissue
  * refresh token으로 access/refresh 토큰을 재발급한다.
  *
  * 응답 200: { accessToken, refreshToken }
  * 응답 401: 유효하지 않거나 만료된 refresh token → 재로그인 필요
+ *
+ * [중요] 동시 호출 방지:
+ * 화면 하나가 Promise.all로 API를 4개씩 쏘는데(GroupDetail 등), access
+ * token이 만료돼 있으면 4개가 동시에 401을 받고 각자 재발급을 시도한다.
+ * 서버가 refresh token을 회전(사용 즉시 폐기, 새 토큰 발급)시키면
+ * 첫 번째 재발급만 성공하고 나머지는 이미 폐기된 토큰으로 요청해서
+ * 401 → clearTokens() → 멀쩡한 사용자가 로그인 화면으로 튕긴다.
+ * 그래서 진행 중인 재발급 Promise를 공유해, 뒤따라온 요청은 새로 만들지
+ * 않고 같은 결과를 기다리게 한다.
  */
-async function reissueToken() {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) throw new Error("refresh token이 없습니다");
+function reissueToken() {
+  if (reissuePromise) return reissuePromise;
 
-  const res = await fetch(`${BASE_URL}/api/member/reissue`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
+  reissuePromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) throw new Error("refresh token이 없습니다");
+
+    const res = await fetch(`${BASE_URL}/api/member/reissue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!res.ok) {
+      // refresh token도 만료됨 → 완전 로그아웃 처리 필요
+      clearTokens();
+      throw new Error("세션이 만료되었습니다. 다시 로그인해주세요.");
+    }
+
+    const data = await res.json();
+    setTokens(data); // { accessToken, refreshToken }
+    return data.accessToken;
+  })().finally(() => {
+    // 성공이든 실패든 끝나면 캐시를 비워서, 다음 만료 때 다시 시도할 수 있게 함
+    reissuePromise = null;
   });
 
-  if (!res.ok) {
-    // refresh token도 만료됨 → 완전 로그아웃 처리 필요
-    clearTokens();
-    throw new Error("세션이 만료되었습니다. 다시 로그인해주세요.");
-  }
-
-  const data = await res.json();
-  setTokens(data); // { accessToken, refreshToken }
-  return data.accessToken;
+  return reissuePromise;
 }
 
 /**
@@ -96,7 +125,7 @@ export async function authFetch(url, options = {}) {
     try {
       const newAccessToken = await reissueToken();
       res = await doFetch(newAccessToken);
-    } catch (err) {
+    } catch {
       // 재발급 실패 → 로그인 필요 상태를 호출부가 알 수 있도록 에러 전파
       throw new Error("AUTH_EXPIRED");
     }

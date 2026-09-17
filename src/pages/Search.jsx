@@ -1,66 +1,164 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import SectionTitle, { LeafMark } from "../components/SectionTitle";
-import { AREA_TYPE_LABELS, fetchAreaList } from "../api/areas";
+import { AREA_TYPES, AREA_TYPE_LABELS, searchAreas } from "../api/areas";
 import { categoryStyle } from "../utils/category";
 
-// 실제 API에 키워드 검색 파라미터가 없어서(백엔드에 추가 요청 필요),
-// 임시로 전체 목록을 한 번에 받아온 뒤 프론트에서 이름/주소 텍스트로
-// 필터링하는 방식으로 구현함. 관광지 수가 많지 않을 때만 괜찮은 방식이라,
-// 나중에 데이터가 늘어나거나 백엔드 검색 API가 생기면 그걸로 교체 필요.
-const SEARCH_PAGE_SIZE = 200;
+// 백엔드에 키워드 검색 API(GET /api/area/search)가 생겨서,
+// "전체 목록 200개를 미리 받아두고 프론트에서 filter" 하던 임시 방식은 폐기함.
+// 이제 검색어/카테고리가 바뀔 때마다 서버에 물어보고,
+// 응답의 hasNext를 이용해 스크롤이 바닥에 닿으면 다음 페이지를 이어 붙인다.
+const PAGE_SIZE = 20;
+
+// 타이핑할 때마다 요청을 보내면 서버가 과부하 + 응답 순서가 뒤엉킨다.
+// 마지막 입력 후 300ms 동안 조용하면 그때 한 번만 보낸다.
+const DEBOUNCE_MS = 300;
 
 export default function Search() {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const [allSpots, setAllSpots] = useState([]);
-  const [spotsLoaded, setSpotsLoaded] = useState(false);
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // 검색창에 처음 들어오는 시점에 전체 목록을 미리 한 번 받아둠
+  // 입력창에 보이는 값(즉시 반영) / 실제로 서버에 보낼 값(디바운스됨)을 분리
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedType, setSelectedType] = useState(null); // enum 값 또는 null
+
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [loading, setLoading] = useState(false); // 첫 페이지 로딩
+  const [loadingMore, setLoadingMore] = useState(false); // 다음 페이지 로딩
+  const [error, setError] = useState("");
+
+  const scrollRef = useRef(null); // 스크롤 컨테이너 (IntersectionObserver의 기준)
+  const sentinelRef = useRef(null); // 목록 맨 아래 감지용 빈 div
+  // 요청마다 번호를 매겨서, 늦게 도착한 옛날 응답이 최신 결과를 덮어쓰지 않게 막는다.
+  const requestIdRef = useRef(0);
+
+  const keyword = debouncedQuery.trim();
+  const hasCondition = keyword !== "" || selectedType !== null;
+
+  /* ---------- 1. 입력 디바운스 ---------- */
   useEffect(() => {
-    fetchAreaList({ page: 0, size: SEARCH_PAGE_SIZE })
+    const timer = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS);
+    // query가 또 바뀌면 이전 타이머를 취소 → 마지막 입력 기준으로만 실행됨
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  /* ---------- 2. 검색 조건이 바뀌면 첫 페이지부터 다시 조회 ---------- */
+  useEffect(() => {
+    const myId = ++requestIdRef.current;
+
+    // 검색어도 없고 카테고리도 안 골랐으면 서버를 부르지 않고 비워둔다
+    if (!hasCondition) {
+      setItems([]);
+      setPage(0);
+      setHasNext(false);
+      setError("");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    searchAreas({ keyword, type: selectedType, page: 0, size: PAGE_SIZE })
       .then((res) => {
-        setAllSpots(res.content ?? []);
+        if (myId !== requestIdRef.current) return; // 낡은 응답이면 버림
+        setItems(res.content ?? []);
+        setPage(0);
+        setHasNext(Boolean(res.hasNext));
+        scrollRef.current?.scrollTo({ top: 0 });
       })
       .catch((err) => {
+        if (myId !== requestIdRef.current) return;
         if (err.message === "AUTH_EXPIRED") {
           navigate("/login");
           return;
         }
-        console.error("관광지 목록 로드 실패:", err);
+        setItems([]);
+        setHasNext(false);
+        setError(err.message || "검색에 실패했습니다");
       })
-      .finally(() => setSpotsLoaded(true));
-  }, [navigate]);
+      .finally(() => {
+        if (myId !== requestIdRef.current) return;
+        setLoading(false);
+      });
+  }, [keyword, selectedType, hasCondition, navigate]);
 
-  function runSearch(keyword) {
-    const trimmed = keyword.trim();
-    if (!trimmed) return;
+  /* ---------- 3. 다음 페이지 이어붙이기 ---------- */
+  const loadMore = useCallback(() => {
+    if (!hasNext || loading || loadingMore) return;
 
-    setSubmittedQuery(trimmed);
-    setLoading(true);
+    const myId = requestIdRef.current; // 이 요청을 시작한 시점의 검색 세션 번호
+    const nextPage = page + 1;
+    setLoadingMore(true);
 
-    // 네트워크 요청은 이미 끝나있으니(위 useEffect), 여기서는
-    // 받아둔 목록을 이름/주소 기준으로 필터링만 함
-    const filtered = allSpots.filter(
-      (spot) =>
-        spot.name?.includes(trimmed) || spot.address?.includes(trimmed)
+    searchAreas({ keyword, type: selectedType, page: nextPage, size: PAGE_SIZE })
+      .then((res) => {
+        // 도중에 검색어가 바뀌었으면(= 세션 번호가 달라졌으면) 붙이지 않는다
+        if (myId !== requestIdRef.current) return;
+        setItems((prev) => [...prev, ...(res.content ?? [])]);
+        setPage(nextPage);
+        setHasNext(Boolean(res.hasNext));
+      })
+      .catch((err) => {
+        if (myId !== requestIdRef.current) return;
+        if (err.message === "AUTH_EXPIRED") {
+          navigate("/login");
+          return;
+        }
+        setHasNext(false);
+        setError(err.message || "더 불러오지 못했습니다");
+      })
+      .finally(() => {
+        if (myId !== requestIdRef.current) return;
+        setLoadingMore(false);
+      });
+  }, [hasNext, loading, loadingMore, keyword, selectedType, page, navigate]);
+
+  /* ---------- 4. 무한스크롤 감지 ---------- */
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNext) return;
+
+    // root를 스크롤 컨테이너로 지정해야 한다.
+    // PhoneFrame은 overflow-hidden이고 실제 스크롤은 이 페이지 안쪽 div가 하므로,
+    // 기본값(브라우저 뷰포트)으로 두면 감지가 어긋날 수 있음.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { root: scrollRef.current, rootMargin: "200px" } // 바닥 200px 전에 미리 로드
     );
-    setResults(filtered);
-    setLoading(false);
-  }
 
-  const handleSearch = () => runSearch(query);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNext, loadMore]);
 
-  const handleKeywordClick = (kw) => {
-    setQuery(kw);
-    runSearch(kw);
+  /* ---------- 핸들러 ---------- */
+
+  // 엔터를 누르면 디바운스를 기다리지 않고 바로 반영
+  const handleSubmit = () => setDebouncedQuery(query);
+
+  // 같은 칩을 다시 누르면 선택 해제
+  const toggleType = (type) =>
+    setSelectedType((prev) => (prev === type ? null : type));
+
+  const handleClear = () => {
+    setQuery("");
+    setDebouncedQuery("");
   };
 
+  // "반곡지 · 관광지" 처럼 현재 검색 조건을 한 줄로
+  const conditionLabel = [
+    keyword && `"${keyword}"`,
+    selectedType && AREA_TYPE_LABELS[selectedType],
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-6">
+    <div ref={scrollRef} className="h-full overflow-y-auto bg-[#FDFAF4] pb-6">
       <div className="px-5 pt-6">
 
         {/* 검색바 + 뒤로가기 */}
@@ -78,43 +176,55 @@ export default function Search() {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder={spotsLoaded ? "관광장소 / 키워드로 검색" : "목록 불러오는 중..."}
-              disabled={!spotsLoaded}
-              className="flex-1 bg-transparent outline-none text-sm text-[#2A2420] placeholder-[#8C8274] disabled:opacity-60"
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              placeholder="관광장소 이름으로 검색"
+              className="flex-1 bg-transparent outline-none text-sm text-[#2A2420] placeholder-[#8C8274]"
             />
             {query && (
-              <button onClick={() => setQuery("")} aria-label="검색어 지우기">
+              <button onClick={handleClear} aria-label="검색어 지우기">
                 <XCircleIcon />
               </button>
             )}
           </div>
         </div>
 
-        {/* 검색 전: 인기 키워드 */}
-        {!submittedQuery && (
-          <>
-            <SectionTitle tone="#3F6B45">인기 검색어</SectionTitle>
-            <div className="flex flex-wrap gap-2 gs-stagger">
-              {popularKeywords.map((kw, i) => {
-                const tone = KEYWORD_TONES[i % KEYWORD_TONES.length];
-                return (
-                  <button
-                    key={kw}
-                    onClick={() => handleKeywordClick(kw)}
-                    disabled={!spotsLoaded}
-                    className="px-3.5 py-2 rounded-full text-sm font-medium gs-press disabled:opacity-50"
-                    style={{ backgroundColor: tone.bg, color: tone.fg }}
-                  >
-                    {kw}
-                  </button>
-                );
-              })}
+        {/* 카테고리 필터 (검색어와 함께 쓰면 AND로 좁혀짐) */}
+        <div className="flex flex-wrap gap-2 mb-5">
+          {AREA_TYPES.map((type, i) => {
+            const tone = KEYWORD_TONES[i % KEYWORD_TONES.length];
+            const active = selectedType === type;
+            return (
+              <button
+                key={type}
+                onClick={() => toggleType(type)}
+                aria-pressed={active}
+                className="px-3.5 py-2 rounded-full text-sm font-medium gs-press transition-colors"
+                style={
+                  active
+                    ? { backgroundColor: "#8B4A26", color: "#FFFDF8" }
+                    : { backgroundColor: tone.bg, color: tone.fg }
+                }
+              >
+                {AREA_TYPE_LABELS[type]}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 검색 전 안내 */}
+        {!hasCondition && !loading && (
+          <div className="flex flex-col items-center justify-center py-16 text-center gs-rise">
+            <div className="w-14 h-14 rounded-full bg-[#F6ECDD] flex items-center justify-center mb-3 gs-float">
+              <LeafMark color="#8B4A26" size={24} />
             </div>
-          </>
+            <p className="text-sm text-[#2A2420] mb-1">경산의 어디가 궁금하세요?</p>
+            <p className="text-xs text-[#8C8274]">
+              이름을 입력하거나 위 카테고리를 골라보세요
+            </p>
+          </div>
         )}
 
-        {/* 로딩 */}
+        {/* 첫 페이지 로딩 */}
         {loading && (
           <div className="grid grid-cols-2 gap-x-3 gap-y-5 mt-1">
             {[0, 1, 2, 3].map((i) => (
@@ -126,58 +236,96 @@ export default function Search() {
           </div>
         )}
 
+        {/* 에러 */}
+        {!loading && error && (
+          <div className="py-16 text-center gs-rise">
+            <p className="text-sm text-[#2A2420] mb-1">검색을 불러오지 못했어요</p>
+            <p className="text-xs text-[#8C8274] mb-4">{error}</p>
+            <button
+              onClick={handleSubmit}
+              className="px-4 py-2 rounded-full text-sm font-medium bg-[#F6ECDD] text-[#8B4A26] gs-press"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
+
         {/* 검색 결과 */}
-        {!loading && submittedQuery && (
+        {!loading && !error && hasCondition && (
           <>
+            <SectionTitle tone="#8B4A26">검색 결과</SectionTitle>
             <p className="text-xs text-[#8C8274] mb-3">
-              "{submittedQuery}" 검색 결과 {results.length}곳
+              {conditionLabel} · {items.length}곳{hasNext && " 이상"}
             </p>
 
-            {results.length === 0 ? (
+            {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center gs-rise">
                 <div className="w-14 h-14 rounded-full bg-[#E8F0E6] flex items-center justify-center mb-3 gs-float">
                   <LeafMark color="#4B6B4E" size={24} />
                 </div>
                 <p className="text-sm text-[#2A2420] mb-1">검색 결과가 없어요</p>
-                <p className="text-xs text-[#8C8274]">다른 이름이나 지역으로 찾아보세요</p>
+                <p className="text-xs text-[#8C8274]">
+                  다른 이름으로 찾거나 카테고리를 바꿔보세요
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-x-3 gap-y-5 gs-stagger">
-                {results.map((spot) => {
-                  const cat = categoryStyle(spot.category);
-                  return (
-                    <button
-                      key={spot.id}
-                      onClick={() => navigate(`/spots/${spot.id}`)}
-                      className="text-left gs-press"
-                    >
-                      <div className="w-full aspect-square rounded-2xl bg-[#F6F0E4] border border-[#EBE0CE] flex items-center justify-center mb-2 overflow-hidden shadow-sm shadow-[#8B4A26]/5">
-                        {spot.imageUrl ? (
-                          <img src={spot.imageUrl} alt={spot.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-[13px] font-medium text-[#2A2420] truncate">
-                          {spot.name}
+              <>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-5 gs-stagger">
+                  {items.map((spot) => {
+                    const cat = categoryStyle(spot.category);
+                    return (
+                      <button
+                        key={spot.id}
+                        onClick={() => navigate(`/spots/${spot.id}`)}
+                        className="text-left gs-press"
+                      >
+                        <div className="w-full aspect-square rounded-2xl bg-[#F6F0E4] border border-[#EBE0CE] flex items-center justify-center mb-2 overflow-hidden shadow-sm shadow-[#8B4A26]/5">
+                          {spot.imageUrl ? (
+                            <img
+                              src={spot.imageUrl}
+                              alt={spot.name}
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[13px] font-medium text-[#2A2420] truncate">
+                            {spot.name}
+                          </p>
+                          {spot.category && (
+                            <span
+                              className="shrink-0 text-[9.5px] rounded-full px-1.5 py-0.5"
+                              style={{ backgroundColor: cat.bg, color: cat.fg }}
+                            >
+                              {AREA_TYPE_LABELS[spot.category] ?? spot.category}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#8C8274] mt-0.5 truncate">
+                          {spot.address}
                         </p>
-                        {spot.category && (
-                          <span
-                            className="shrink-0 text-[9.5px] rounded-full px-1.5 py-0.5"
-                            style={{ backgroundColor: cat.bg, color: cat.fg }}
-                          >
-                            {AREA_TYPE_LABELS[spot.category] ?? spot.category}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-[#8C8274] mt-0.5 truncate">
-                        {spot.address}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 이 div가 화면에 보이면 다음 페이지를 불러온다 */}
+                <div ref={sentinelRef} className="h-px" />
+
+                {loadingMore && (
+                  <p className="text-center text-xs text-[#8C8274] py-5">
+                    불러오는 중…
+                  </p>
+                )}
+                {!hasNext && items.length > PAGE_SIZE && (
+                  <p className="text-center text-xs text-[#A99B86] py-5">
+                    마지막 결과예요
+                  </p>
+                )}
+              </>
             )}
           </>
         )}
@@ -187,9 +335,7 @@ export default function Search() {
   );
 }
 
-const popularKeywords = ["바다", "감성", "혼자여행", "무장애", "카페", "산"];
-
-/** 인기 검색어 칩 색 - 회색 칩만 늘어서 있던 자리에 계절색을 돌려 쓴다 */
+/** 카테고리 칩 색 - 회색 칩만 늘어서 있던 자리에 계절색을 돌려 쓴다 */
 const KEYWORD_TONES = [
   { bg: "#E4EFF2", fg: "#3D6E7C" },
   { bg: "#FAE7E5", fg: "#B04A46" },

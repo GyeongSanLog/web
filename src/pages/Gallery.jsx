@@ -20,6 +20,7 @@ const TILE_SCENES = [
 export default function Gallery() {
   const navigate = useNavigate();
   const [ongoing, setOngoing] = useState(null);
+  const [upcoming, setUpcoming] = useState([]); // 아직 시작 전인 여행
   const [past, setPast] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,13 +29,12 @@ export default function Gallery() {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
 
-  const [showNoGroupModal, setShowNoGroupModal] = useState(false);
-
   function loadGallery() {
     setLoading(true);
     fetchGallery()
       .then((res) => {
         setOngoing(res.ongoing);
+        setUpcoming(res.upcoming ?? []);
         setPast(res.past);
       })
       .catch((err) => {
@@ -116,11 +116,19 @@ export default function Gallery() {
                   onClick={() => navigate(`/gallery/${ongoing.id}`)}
                   className="w-[130px] h-[130px] rounded-2xl bg-gradient-to-br from-[#4B6B4E] to-[#2C4330] border-[1.5px] border-[#8B4A26] relative flex items-end p-2.5 text-left overflow-hidden shrink-0 gs-press shadow-sm shadow-[#2C4330]/25"
                 >
-                  {/* 지금 찍고 있는 여행 - 옅은 능선과 저녁 해를 깔아 진행중임을 드러낸다 */}
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 130 130" fill="none" aria-hidden="true">
-                    <path d="M0 96l24-22 20 14 26-26 26 20 34-16v64H0z" fill="#ffffff" fillOpacity="0.13" />
-                    <circle cx="100" cy="28" r="8" fill="#E8B769" fillOpacity="0.45" />
-                  </svg>
+                  {/* 그룹 생성 시 올린 썸네일이 있으면 그걸, 없으면 능선+저녁 해 장식을 깐다 */}
+                  {ongoing.imageUrl ? (
+                    <img
+                      src={ongoing.imageUrl}
+                      alt={ongoing.name}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 130 130" fill="none" aria-hidden="true">
+                      <path d="M0 96l24-22 20 14 26-26 26 20 34-16v64H0z" fill="#ffffff" fillOpacity="0.13" />
+                      <circle cx="100" cy="28" r="8" fill="#E8B769" fillOpacity="0.45" />
+                    </svg>
+                  )}
                   <span className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-[#E8B769] px-2 py-0.5 z-10">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#7A5312] animate-pulse" />
                     <span className="text-[9.5px] font-bold text-[#5C4433]">기록중</span>
@@ -150,6 +158,40 @@ export default function Gallery() {
               </button>
             </div>
 
+            {/* 예정된 여행 - 아직 시작 전이라 촬영도 조회도 안 되지만,
+                초대코드 공유 등을 위해 상세 진입은 가능하게 둔다 */}
+            {upcoming.length > 0 && (
+              <>
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#E8B769]" />
+                  <p className="text-xs text-[#6B6156] font-medium">예정된 여행</p>
+                </div>
+                <div className="flex flex-col gap-2 mb-7 gs-stagger">
+                  {upcoming.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => navigate(`/gallery/${g.id}`)}
+                      className="flex items-center gap-3 rounded-2xl bg-[#FFFCF6] border border-[#EBE0CE] px-3.5 py-3 text-left gs-press hover:bg-[#FBF5EA]"
+                    >
+                      <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-[#F6ECDD] flex items-center justify-center">
+                        {g.imageUrl ? (
+                          <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <CalendarIcon />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-[#2A2420] truncate">{g.name}</p>
+                        <p className="text-[11px] text-[#8C8274] mt-0.5">
+                          {formatShortDate(g.startAt)} ~ {formatShortDate(g.endAt)} · {daysUntil(g.startAt)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
             <div className="h-px bg-gradient-to-r from-transparent via-[#DCCFB6] to-transparent mb-6" />
 
             {groupedPast.length === 0 ? (
@@ -178,9 +220,23 @@ export default function Gallery() {
                         key={g.id}
                         onClick={() => navigate(`/gallery/${g.id}`)}
                         className="aspect-square rounded-xl relative flex items-center justify-center overflow-hidden text-left gs-press shadow-sm shadow-[#8B4A26]/10"
-                        style={{ backgroundImage: TILE_SCENES[i % TILE_SCENES.length] }}
+                        style={
+                          g.imageUrl
+                            ? undefined
+                            : { backgroundImage: TILE_SCENES[i % TILE_SCENES.length] }
+                        }
                       >
-                        <PhotoPlaceholderIcon />
+                        {/* 그룹 썸네일이 있으면 표시 — 예전엔 imageUrl을 아예 안 읽어서
+                            업로드한 사진이 갤러리 어디에도 안 보였음 */}
+                        {g.imageUrl ? (
+                          <img
+                            src={g.imageUrl}
+                            alt={g.name}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        ) : (
+                          <PhotoPlaceholderIcon />
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
                         <p className="absolute bottom-2 left-2.5 text-[11px] text-white font-medium drop-shadow">
                           {g.name}
@@ -323,6 +379,18 @@ function formatShortDate(dateStr) {
   return `${d.getMonth() + 1}.${d.getDate()}`;
 }
 
+/** 시작일까지 남은 날 — "내일 시작" / "3일 후 시작" */
+function daysUntil(dateStr) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(dateStr);
+  start.setHours(0, 0, 0, 0);
+  const days = Math.round((start - today) / (1000 * 60 * 60 * 24));
+  if (days <= 0) return "곧 시작";
+  if (days === 1) return "내일 시작";
+  return `${days}일 후 시작`;
+}
+
 /* --- 아이콘 --- */
 
 function PlusIcon() {
@@ -339,6 +407,16 @@ function PhotoPlaceholderIcon() {
       <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.6" />
       <circle cx="8.3" cy="9.3" r="1.4" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.4" />
       <path d="M5 17l4.5-4.5a1.5 1.5 0 0 1 2.1 0L15 16m-1.5-1.5l1.3-1.3a1.5 1.5 0 0 1 2.1 0L19.5 16" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" stroke="#8B4A26" strokeWidth="1.7" />
+      <path d="M3.5 10h17" stroke="#8B4A26" strokeWidth="1.7" />
+      <path d="M8 3.5v4M16 3.5v4" stroke="#8B4A26" strokeWidth="1.7" strokeLinecap="round" />
     </svg>
   );
 }

@@ -25,7 +25,16 @@ export default function CameraResult() {
   const [uploading, setUploading] = useState(false);
   const [composing, setComposing] = useState(false); // 자막 합성 중
   const [uploadDone, setUploadDone] = useState(false);
+  const [letterFailed, setLetterFailed] = useState(false); // 클립은 저장됐지만 편지만 실패한 경우
   const [error, setError] = useState("");
+
+  // 영상 없이는 저장할 수 없음. videoBlob이 없는 경우는 두 가지:
+  //   1) 카메라 권한 거부 → Camera.jsx가 goNext(null, null)로 넘김
+  //   2) 이 화면에서 새로고침 → location.state가 사라짐
+  // 예전엔 이 상태에서도 저장 버튼이 눌려서 uploadClip이
+  // formData.append("file", null)을 실행했고, 이건 파일이 아니라 "null"이라는
+  // 문자열 4글자를 붙이는 거라 서버가 400을 내거나 깨진 파일이 저장됐음.
+  const canSave = Boolean(videoBlob);
 
   // 영상에 함께 박힐 촬영 시간 (예: "14:32")
   const timeLabel = formatTimeLabel(capturedAt);
@@ -69,67 +78,62 @@ export default function CameraResult() {
   }
 
   async function handleSave() {
-    if (uploading) return;
+    if (uploading || !canSave) return;
     setError("");
+    setLetterFailed(false);
     setUploading(true);
-    console.log("[handleSave] 시작", { hasVideoBlob: !!videoBlob, groupId, capturedAt });
 
     try {
       // 1) 촬영 시간과 자막을 영상에 합성한 뒤 업로드.
       //    합성이 실패하거나 브라우저가 지원하지 않으면 원본이 그대로 반환됨.
       //    comment로도 자막 텍스트를 함께 보내둠(검색/표시용).
-      let finalBlob = videoBlob;
-      if (videoBlob) {
-        console.log("[handleSave] 자막 합성 시작");
-        setComposing(true);
-        finalBlob = await burnOverlayIntoVideo(videoBlob, {
-          caption: caption.trim(),
-          capturedAt,
-        });
-        setComposing(false);
-        console.log("[handleSave] 자막 합성 끝", {
-          originalSize: videoBlob.size,
-          finalSize: finalBlob?.size,
-          finalType: finalBlob?.type,
-        });
-      } else {
-        console.log("[handleSave] videoBlob이 없어서 합성 스킵");
-      }
+      setComposing(true);
+      const finalBlob = await burnOverlayIntoVideo(videoBlob, {
+        caption: caption.trim(),
+        capturedAt,
+      });
+      setComposing(false);
 
-      console.log("[handleSave] uploadClip 호출 직전");
-      const clipRes = await uploadClip({
+      await uploadClip({
         groupId,
         videoBlob: finalBlob,
         comment: caption.trim() || undefined,
-        capturedAt: capturedAt || new Date().toISOString(),
+        capturedAt,
       });
-      console.log("[handleSave] uploadClip 성공", clipRes);
 
       // 2) 받는 사람을 선택했고 편지 내용도 있을 때만 편지 전송.
       //    클립 업로드와는 독립적인 동작이라, 편지 전송이 실패해도
-      //    클립 저장 자체는 이미 완료된 것으로 처리함.
+      //    클립 저장 자체는 이미 완료된 것으로 처리하되, 사용자에게는 알려준다.
+      //    (예전엔 console.error만 찍고 "업로드 완료"로 넘어가서, 정성껏 쓴
+      //     편지가 조용히 사라졌음 — 같은 사람에게 이미 보낸 경우 409 등)
+      let letterOk = true;
       if (selectedId && letter.trim()) {
-        console.log("[handleSave] writeLetter 호출 직전", { selectedId });
         try {
-          const letterRes = await writeLetter(groupId, {
+          await writeLetter(groupId, {
             receiverId: selectedId,
             content: letter.trim(),
           });
-          console.log("[handleSave] writeLetter 성공", letterRes);
         } catch (letterErr) {
-          console.error("편지 전송 실패 (클립은 저장됨):", letterErr);
+          if (letterErr.message === "AUTH_EXPIRED") {
+            navigate("/login");
+            return;
+          }
+          letterOk = false;
+          setLetterFailed(true);
+          setError(letterErr.message || "편지를 전송하지 못했어요");
         }
       }
 
-      console.log("[handleSave] 전체 완료, 이동 예정");
       setUploadDone(true);
-      setTimeout(() => {
-        // replace: true — 촬영/결과 화면(이미 끝난 단계)이 히스토리에 남아있으면
-        // 그룹상세에서 뒤로가기 눌렀을 때 거기로 돌아가버리는 문제가 있어서 대체함
-        navigate(`/gallery/${groupId}`, { replace: true });
-      }, 1200);
+      setTimeout(
+        () => {
+          // replace: true — 촬영/결과 화면(이미 끝난 단계)이 히스토리에 남아있으면
+          // 그룹상세에서 뒤로가기 눌렀을 때 거기로 돌아가버리는 문제가 있어서 대체함
+          navigate(`/gallery/${groupId}`, { replace: true });
+        },
+        letterOk ? 1200 : 2600 // 편지 실패 안내는 읽을 시간을 조금 더 줌
+      );
     } catch (err) {
-      console.error("[handleSave] 에러 발생", err);
       setComposing(false);
       if (err.message === "AUTH_EXPIRED") {
         navigate("/login");
@@ -184,8 +188,13 @@ export default function CameraResult() {
               className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
               <PlaceholderPlay />
+              <p className="text-xs text-white/70 leading-relaxed">
+                촬영된 영상이 없어요.
+                <br />
+                다시 찍기를 눌러 촬영해주세요
+              </p>
             </div>
           )}
 
@@ -316,14 +325,21 @@ export default function CameraResult() {
           </p>
         )}
 
-        {error && <p className="text-xs text-[#d70015] mt-3">{error}</p>}
+        {!canSave && (
+          <p className="text-xs text-[#d70015] mt-3">
+            영상이 없어서 저장할 수 없어요. 다시 찍기를 눌러주세요.
+          </p>
+        )}
+        {error && !letterFailed && (
+          <p className="text-xs text-[#d70015] mt-3">{error}</p>
+        )}
       </div>
 
       {/* 하단 저장 버튼 */}
       <div className="shrink-0 px-5 pt-3 pb-6 border-t border-[#EFE7D9] bg-white">
         <button
           onClick={handleSave}
-          disabled={uploading}
+          disabled={uploading || !canSave}
           className="w-full h-12 rounded-2xl bg-[#8B4A26] text-white text-sm font-medium disabled:opacity-35 disabled:cursor-not-allowed gs-press"
         >
           {composing
@@ -336,12 +352,18 @@ export default function CameraResult() {
 
       {/* 업로드 완료 */}
       {uploadDone && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#2A1A0C]/30">
-          <div className="flex flex-col items-center gap-2.5 rounded-2xl bg-white px-8 py-6 shadow-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#2A1A0C]/30 px-8">
+          <div className="flex flex-col items-center gap-2.5 rounded-2xl bg-white px-8 py-6 shadow-xl text-center">
             <div className="w-12 h-12 rounded-full bg-[#F6ECDD] flex items-center justify-center">
               <CheckIcon />
             </div>
             <p className="text-sm font-medium text-[#2A2420]">업로드 완료</p>
+            {letterFailed && (
+              <p className="text-xs text-[#d70015] leading-relaxed whitespace-pre-line">
+                영상은 저장됐지만 편지는 전송되지 않았어요
+                {error ? `\n(${error})` : ""}
+              </p>
+            )}
           </div>
         </div>
       )}

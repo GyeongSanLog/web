@@ -27,8 +27,15 @@ export default function MyPage() {
 
   const handleLogout = async () => {
     await logout();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
+
+  // 소셜 로그인(카카오 등) 사용자는 비밀번호가 없어서 "비밀번호 재설정"을
+  // 눌러봤자 "현재 비밀번호가 일치하지 않습니다"만 뜸 → 메뉴 자체를 숨긴다.
+  // provider 값이 정확히 어떤 문자열로 오는지 확정되지 않아서(예: "KAKAO"),
+  // 알려진 소셜 이름이 들어있을 때만 숨기는 보수적인 판정을 쓴다.
+  // (반대로 하면 일반 가입자에게 메뉴가 잘못 숨겨질 위험이 있음)
+  const isSocialLogin = /kakao|google|naver|apple/i.test(user?.provider ?? "");
 
   return (
     <div className="h-full flex flex-col bg-[#FDFAF4]">
@@ -100,11 +107,15 @@ export default function MyPage() {
         {/* 설정 */}
         <SectionLabel tone="#3F6B45">설정</SectionLabel>
         <div className="rounded-2xl bg-[#FFFCF6] border border-[#EBE0CE] overflow-hidden">
-          <MenuRow
-            label="비밀번호 재설정"
-            onClick={() => navigate("/password-reset")}
-          />
-          <Divider />
+          {!isSocialLogin && (
+            <>
+              <MenuRow
+                label="비밀번호 재설정"
+                onClick={() => navigate("/password-reset")}
+              />
+              <Divider />
+            </>
+          )}
           <button
             onClick={handleLogout}
             className="w-full flex items-center px-4 py-4 text-left gs-press"

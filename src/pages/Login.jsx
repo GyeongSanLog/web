@@ -111,12 +111,20 @@ export default function Login() {
           {submitting ? "로그인 중..." : "로그인"}
         </button>
 
+        {/* 아이디 찾기 / 비밀번호 변경 버튼 - 임시 비활성화
+            백엔드에 대응 API가 없음(스웨거 확인 완료): 아이디 찾기, 비밀번호
+            분실 재설정 둘 다 엔드포인트 자체가 없어서 눌러도 진행이 안 됨.
+            화면(FindAccount.jsx)과 라우트(/find-account)는 만들어 뒀으니,
+            나중에 백엔드에 아래 API가 추가되면 이 버튼만 다시 살리면 됨:
+              - 비밀번호 재설정용 이메일 인증 발송/검증 (가입된 이메일 대상)
+              - 인증 통과 후 새 비밀번호로 변경 (로그인 토큰 없이 호출 가능해야 함)
         <button
           onClick={() => navigate("/find-account")}
           className="w-full text-center text-xs text-[#6B6156] underline mb-8 gs-press"
         >
           아이디 찾기 / 비밀번호 변경
         </button>
+        */}
 
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-[#E6DDCD]" />
@@ -124,7 +132,6 @@ export default function Login() {
           <div className="flex-1 h-px bg-[#E6DDCD]" />
         </div>
 
-        {/* TODO: 구글 OAuth API 명세 받으면 연동 (카카오는 연동 완료) */}
         <div className="flex flex-col gap-3 mb-6">
           <button
             onClick={handleKakaoLogin}
@@ -132,12 +139,6 @@ export default function Login() {
             className="h-12 rounded-2xl bg-[#FEE500] text-[#3C1E1E] text-sm font-medium gs-press hover:brightness-95 disabled:opacity-60"
           >
             {kakaoLoading ? "이동 중..." : "카카오로 계속하기"}
-          </button>
-          <button
-            onClick={() => console.log("구글 로그인 TODO - API 명세 대기중")}
-            className="h-12 rounded-2xl bg-[#FFFDF8] border border-[#E7DAC4] text-[#2A2420] text-sm font-medium gs-press hover:bg-[#F8F1E4]"
-          >
-            구글로 계속하기
           </button>
         </div>
 
