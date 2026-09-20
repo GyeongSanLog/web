@@ -25,9 +25,16 @@ export default function Search() {
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
-  const [loading, setLoading] = useState(false); // 첫 페이지 로딩
   const [loadingMore, setLoadingMore] = useState(false); // 다음 페이지 로딩
   const [error, setError] = useState("");
+  // "어떤 검색 조건의 결과까지 화면에 반영됐는지". 현재 조건과 다르면 로딩 중인 것.
+  // loading을 별도 state로 두고 effect에서 setLoading(true)를 부르는 대신,
+  // 이렇게 파생시키면 effect 안에서 동기 setState를 할 필요가 없다.
+  const [resolvedKey, setResolvedKey] = useState(null);
+  // "다시 시도"용 카운터. 검색 키에 섞여 들어가서, 같은 조건이라도 값이 바뀌면
+  // 새 검색으로 취급된다. (예전엔 같은 검색어를 다시 set해도 React가 변경으로
+  // 보지 않아 effect가 재실행되지 않았고, 다시 시도 버튼이 아무 일도 안 했음)
+  const [attempt, setAttempt] = useState(0);
 
   const scrollRef = useRef(null); // 스크롤 컨테이너 (IntersectionObserver의 기준)
   const sentinelRef = useRef(null); // 목록 맨 아래 감지용 빈 div
@@ -36,6 +43,16 @@ export default function Search() {
 
   const keyword = debouncedQuery.trim();
   const hasCondition = keyword !== "" || selectedType !== null;
+
+  // 검색 조건을 하나의 문자열 키로 (조건이 없으면 null)
+  const searchKey = hasCondition
+    ? `${keyword}\u0000${selectedType ?? ""}\u0000${attempt}`
+    : null;
+
+  // 첫 페이지 로딩 = 조건이 있고, 그 조건의 결과가 아직 반영되지 않음
+  const loading = searchKey !== null && resolvedKey !== searchKey;
+  // 에러는 그 조건의 응답이 도착한 뒤에만 보여준다 (새 검색이 시작되면 자동으로 가려짐)
+  const showError = Boolean(error) && hasCondition && !loading;
 
   /* ---------- 1. 입력 디바운스 ---------- */
   useEffect(() => {
@@ -46,20 +63,13 @@ export default function Search() {
 
   /* ---------- 2. 검색 조건이 바뀌면 첫 페이지부터 다시 조회 ---------- */
   useEffect(() => {
+    // 요청 번호를 올려서, 진행 중이던 이전 검색의 응답이 도착해도 무시되게 한다
     const myId = ++requestIdRef.current;
 
-    // 검색어도 없고 카테고리도 안 골랐으면 서버를 부르지 않고 비워둔다
-    if (!hasCondition) {
-      setItems([]);
-      setPage(0);
-      setHasNext(false);
-      setError("");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
+    // 검색어도 없고 카테고리도 안 골랐으면 서버를 부르지 않는다.
+    // 목록/로딩 표시는 렌더링 쪽에서 hasCondition으로 가려지므로 여기서
+    // 상태를 비울 필요가 없다 (effect 안의 동기 setState를 피하기 위함).
+    if (searchKey === null) return;
 
     searchAreas({ keyword, type: selectedType, page: 0, size: PAGE_SIZE })
       .then((res) => {
@@ -67,6 +77,7 @@ export default function Search() {
         setItems(res.content ?? []);
         setPage(0);
         setHasNext(Boolean(res.hasNext));
+        setError("");
         scrollRef.current?.scrollTo({ top: 0 });
       })
       .catch((err) => {
@@ -81,9 +92,9 @@ export default function Search() {
       })
       .finally(() => {
         if (myId !== requestIdRef.current) return;
-        setLoading(false);
+        setResolvedKey(searchKey); // 이 조건의 결과가 반영됨 → loading 해제
       });
-  }, [keyword, selectedType, hasCondition, navigate]);
+  }, [searchKey, keyword, selectedType, navigate]);
 
   /* ---------- 3. 다음 페이지 이어붙이기 ---------- */
   const loadMore = useCallback(() => {
@@ -139,6 +150,9 @@ export default function Search() {
 
   // 엔터를 누르면 디바운스를 기다리지 않고 바로 반영
   const handleSubmit = () => setDebouncedQuery(query);
+
+  // 에러 화면의 "다시 시도" — 같은 조건으로 강제 재검색
+  const handleRetry = () => setAttempt((a) => a + 1);
 
   // 같은 칩을 다시 누르면 선택 해제
   const toggleType = (type) =>
@@ -212,7 +226,7 @@ export default function Search() {
         </div>
 
         {/* 검색 전 안내 */}
-        {!hasCondition && !loading && (
+        {!hasCondition && (
           <div className="flex flex-col items-center justify-center py-16 text-center gs-rise">
             <div className="w-14 h-14 rounded-full bg-[#F6ECDD] flex items-center justify-center mb-3 gs-float">
               <LeafMark color="#8B4A26" size={24} />
@@ -237,12 +251,12 @@ export default function Search() {
         )}
 
         {/* 에러 */}
-        {!loading && error && (
+        {showError && (
           <div className="py-16 text-center gs-rise">
             <p className="text-sm text-[#2A2420] mb-1">검색을 불러오지 못했어요</p>
             <p className="text-xs text-[#8C8274] mb-4">{error}</p>
             <button
-              onClick={handleSubmit}
+              onClick={handleRetry}
               className="px-4 py-2 rounded-full text-sm font-medium bg-[#F6ECDD] text-[#8B4A26] gs-press"
             >
               다시 시도
@@ -251,7 +265,7 @@ export default function Search() {
         )}
 
         {/* 검색 결과 */}
-        {!loading && !error && hasCondition && (
+        {!loading && !showError && hasCondition && (
           <>
             <SectionTitle tone="#8B4A26">검색 결과</SectionTitle>
             <p className="text-xs text-[#8C8274] mb-3">

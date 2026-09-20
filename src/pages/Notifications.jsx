@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import AppHeader from "../components/AppHeader";
-import { useNotifications } from "../context/NotificationsContext";
+import { useNotifications } from "../context/useNotifications";
 
 /**
  * 알림 화면.

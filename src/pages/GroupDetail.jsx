@@ -42,10 +42,9 @@ export default function GroupDetail() {
   // 클립 재생 모달 상태
   const [openClip, setOpenClip] = useState(null);
 
+  // loading/error를 effect에서 리셋하지 않는 이유: App.jsx에서
+  // <GroupDetail key={groupId}>로 렌더링해서 groupId가 바뀌면 새로 마운트됨.
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
     Promise.all([
       fetchGroupInfo(groupId),
       fetchMyInfo(),

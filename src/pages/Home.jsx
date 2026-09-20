@@ -5,7 +5,7 @@ import AppHeader from "../components/AppHeader";
 import { fetchPopularAreas, fetchOngoingFestivals, fetchAreaList } from "../api/areas";
 import SectionTitle from "../components/SectionTitle";
 import { categoryStyle, rankStyle } from "../utils/category";
-import { useNotifications } from "../context/NotificationsContext";
+import { useNotifications } from "../context/useNotifications";
 
 /**
  * 이름 매칭용 정규화 - 공백/대소문자 차이로 매칭이 실패하는 걸 줄임

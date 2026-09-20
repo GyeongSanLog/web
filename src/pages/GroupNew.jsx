@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import AppHeader from "../components/AppHeader";
 import { createGroup } from "../api/groups";
 
 export default function GroupNew() {
@@ -8,7 +7,7 @@ export default function GroupNew() {
   const fileInputRef = useRef(null);
 
   const [name, setName] = useState("");
-  const [startAt, setStartAt] = useState("");
+  const [startAt, setStartAt] = useState(""); // "YYYY-MM-DDTHH:mm" (datetime-local 값)
   const [endAt, setEndAt] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
@@ -17,6 +16,10 @@ export default function GroupNew() {
   const [error, setError] = useState("");
 
   const isValid = name.trim() && startAt && endAt;
+
+  // 지금 시각을 정시로 내림한 값. datetime-local의 min으로 써서 과거를 막는다.
+  // 과거로 만들면 생성 직후 "종료된 여행"이 돼서 촬영을 한 번도 못 하기 때문.
+  const nowHour = toDateTimeInputValue(roundDownToHour(new Date()));
 
   function handleImageChange(e) {
     const file = e.target.files?.[0];
@@ -28,13 +31,27 @@ export default function GroupNew() {
     setImagePreviewUrl(URL.createObjectURL(file));
   }
 
+  // datetime-local input은 기본으로 분 단위 선택까지 나오는데, 이 서비스는
+  // 시간대(slot) 단위가 "시" 하나뿐이라 분은 의미가 없다. 사용자가 스크롤 등으로
+  // 분을 바꿔 넣어도 여기서 정시로 강제로 내림해 저장한다.
+  function handleStartChange(value) {
+    const rounded = roundDateTimeInputToHour(value);
+    setStartAt(rounded);
+    // 시작일시를 종료일시보다 뒤로 옮기면 종료일시도 같이 당겨준다
+    if (endAt && rounded > endAt) setEndAt(rounded);
+  }
+
+  function handleEndChange(value) {
+    setEndAt(roundDateTimeInputToHour(value));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!isValid || submitting) return;
 
-    // 종료일이 시작일보다 빠르면 막기 (프론트 자체 검증, 서버 규칙은 별도 확인 필요)
+    // 종료일시가 시작일시보다 빠르면 막기 (프론트 자체 검증, 서버 규칙은 별도 확인 필요)
     if (endAt < startAt) {
-      setError("종료일은 시작일보다 빠를 수 없어요");
+      setError("종료 시각은 시작 시각보다 빠를 수 없어요");
       return;
     }
 
@@ -48,8 +65,13 @@ export default function GroupNew() {
       // 아니라 갤러리로 돌아감.
       navigate(`/gallery/${group.id}`, { replace: true });
     } catch (err) {
-      console.error("그룹 생성 실패:", err);
-      setError("그룹 생성에 실패했어요. 잠시 후 다시 시도해주세요");
+      if (err.message === "AUTH_EXPIRED") {
+        navigate("/login");
+        return;
+      }
+      // 서버가 준 메시지가 있으면 그대로 보여준다 (예전엔 고정 문구로 덮어써서
+      // 무엇이 문제였는지 알 수 없었음)
+      setError(err.message || "그룹 생성에 실패했어요. 잠시 후 다시 시도해주세요");
     } finally {
       setSubmitting(false);
     }
@@ -57,9 +79,21 @@ export default function GroupNew() {
 
   return (
     <div className="h-full overflow-y-auto bg-[#FDFAF4]">
-      <AppHeader />
+      {/* 이 화면은 AppHeader(로고 헤더)가 아니라 폼 전용 헤더를 쓴다.
+          예전엔 헤더에 뒤로가기가 아예 없어서 갤러리로 돌아갈 방법이
+          모달 뒤로가기(브라우저 back)뿐이었음. */}
+      <div className="flex items-center gap-2.5 px-5 pt-6 mb-2">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center shrink-0 gs-press"
+          aria-label="뒤로가기"
+        >
+          <ArrowLeftIcon />
+        </button>
+      </div>
 
-      <form onSubmit={handleSubmit} className="px-5 pt-6 pb-10">
+      <form onSubmit={handleSubmit} className="px-5 pt-2 pb-10">
         <p className="font-brand text-[22px] font-bold text-[#2A2420] mb-6 gs-rise">
           새 여행 그룹 만들기
         </p>
@@ -100,29 +134,34 @@ export default function GroupNew() {
           />
         </div>
 
-        {/* 시작일 / 종료일 */}
-        <div className="flex gap-3 mb-2">
-          <div className="flex-1">
-            <label className="text-sm text-[#2A2420] font-medium block mb-2">시작일</label>
+        {/* 시작 일시 / 종료 일시 - 시간대(slot) 단위가 "시"라서 분은 받지 않고
+            항상 정시로 맞춘다 (예: 14:00, 14:30 선택 X) */}
+        <div className="flex flex-col gap-4 mb-2">
+          <div>
+            <label className="text-sm text-[#2A2420] font-medium block mb-2">시작 일시</label>
             <input
-              type="date"
+              type="datetime-local"
+              step={3600}
               value={startAt}
-              onChange={(e) => setStartAt(e.target.value)}
+              min={nowHour}
+              onChange={(e) => handleStartChange(e.target.value)}
               className="w-full h-12 px-3 rounded-2xl bg-[#FFFDF8] border border-[#E7DAC4] text-[15px] text-[#2A2420] outline-none transition-colors focus:border-[#8B4A26]"
             />
           </div>
-          <div className="flex-1">
-            <label className="text-sm text-[#2A2420] font-medium block mb-2">종료일</label>
+          <div>
+            <label className="text-sm text-[#2A2420] font-medium block mb-2">종료 일시</label>
             <input
-              type="date"
+              type="datetime-local"
+              step={3600}
               value={endAt}
-              onChange={(e) => setEndAt(e.target.value)}
+              min={startAt || nowHour}
+              onChange={(e) => handleEndChange(e.target.value)}
               className="w-full h-12 px-3 rounded-2xl bg-[#FFFDF8] border border-[#E7DAC4] text-[15px] text-[#2A2420] outline-none transition-colors focus:border-[#8B4A26]"
             />
           </div>
         </div>
         <p className="text-xs text-[#8C8274] mb-6">
-          초대코드는 그룹 생성 후 자동으로 만들어져요 (최대 10명까지 참여 가능)
+          시간 단위로 기록돼요. 초대코드는 그룹 생성 후 자동으로 만들어져요. (최대 10명까지 참여 가능)
         </p>
 
         {error && (
@@ -138,6 +177,39 @@ export default function GroupNew() {
         </button>
       </form>
     </div>
+  );
+}
+
+/** 분·초를 0으로 내린 Date */
+function roundDownToHour(date) {
+  const d = new Date(date);
+  d.setMinutes(0, 0, 0);
+  return d;
+}
+
+/** Date → "YYYY-MM-DDTHH:mm" (datetime-local input의 value/min 형식, 로컬 시간 기준) */
+function toDateTimeInputValue(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:00`
+  );
+}
+
+/**
+ * datetime-local의 값("YYYY-MM-DDTHH:mm")에서 분을 00으로 강제한다.
+ * 브라우저 스피너로 분을 바꿔도(예: 14:30) 정시(14:00)로 맞춰짐.
+ */
+function roundDateTimeInputToHour(value) {
+  if (!value) return value;
+  return `${value.slice(0, 11)}00`; // "YYYY-MM-DDTHH:" + "00"
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M15 19l-7-7 7-7" stroke="#2A2420" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

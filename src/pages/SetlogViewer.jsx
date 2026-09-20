@@ -11,7 +11,6 @@ export default function SetlogViewer() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    setLoading(true);
     fetchGroupSessions(groupId)
       .then((res) => setData(res))
       .catch((err) => setError(err.message))
@@ -220,6 +219,10 @@ function VideoTile({ entry, className = "" }) {
 }
 
 function formatDate(dateStr) {
+  // ⚠️ 이 화면을 다시 살릴 때: 지금은 목데이터라 괜찮지만, 실제 서버
+  // 값(startAt/capturedAt 등)을 쓰게 되면 new Date() 대신 utils/trip.js의
+  // parseServerDateTime을 써야 함. 서버가 붙여주는 "Z"는 진짜 UTC가
+  // 아니라 한국시간 값 표시라, 그냥 파싱하면 9시간 어긋남.
   const d = new Date(dateStr);
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }

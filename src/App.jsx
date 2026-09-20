@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { NotificationsProvider } from "./context/NotificationsContext";
+import { getAccessToken } from "./api/client";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
@@ -39,6 +40,31 @@ function PhoneFrame({ children }) {
   );
 }
 
+/**
+ * 앱 첫 진입(/) 처리.
+ * 예전엔 무조건 /login으로 보내서, 이미 로그인된 사용자도 앱을 열 때마다
+ * 로그인 화면을 거쳐야 했음. 토큰이 있으면 홈으로 바로 보낸다.
+ * (토큰이 만료돼 있어도 첫 API 호출에서 AUTH_EXPIRED로 /login에 가므로 안전)
+ */
+function RootRedirect() {
+  return <Navigate to={getAccessToken() ? "/home" : "/login"} replace />;
+}
+
+/**
+ * URL 파라미터가 바뀌면(예: 추천 카드로 다른 관광지로 이동) 컴포넌트를
+ * 새로 마운트시키는 래퍼. key가 바뀌면 React가 내부 state를 전부 초기화하므로
+ * 페이지 안에서 effect로 loading/error를 수동 리셋할 필요가 없어진다.
+ */
+function SpotDetailRoute() {
+  const { id } = useParams();
+  return <SpotDetail key={id} />;
+}
+
+function GroupDetailRoute() {
+  const { groupId } = useParams();
+  return <GroupDetail key={groupId} />;
+}
+
 export default function App() {
   return (
     // 알림(읽음 여부, 뱃지 카운트)은 홈 헤더의 종 아이콘과 /notifications
@@ -48,14 +74,14 @@ export default function App() {
         <PhoneFrame>
           <div className="flex-1 min-h-0">
             <Routes>
-              <Route path="/" element={<Navigate to="/login" />} />
+              <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/home" element={<Home />} />
               <Route path="/search" element={<Search />} />
-              <Route path="/spots/:id" element={<SpotDetail />} />
+              <Route path="/spots/:id" element={<SpotDetailRoute />} />
               <Route path="/gallery" element={<Gallery />} />
-              <Route path="/gallery/:groupId" element={<GroupDetail />} />
+              <Route path="/gallery/:groupId" element={<GroupDetailRoute />} />
               <Route path="/gallery/new" element={<GroupNew />} />
               <Route path="/camera/:groupId" element={<Camera />} />
               <Route path="/camera/:groupId/result" element={<CameraResult />} />
@@ -94,6 +120,22 @@ export default function App() {
               />
               <Route path="/map" element={<Map />} />
               {/* <Route path="/setlog/:groupId" element={<SetlogViewer />} /> */}
+
+              {/* 없는 주소 — 예전엔 아무 라우트에도 안 걸려서 흰 화면이 떴음 */}
+              <Route
+                path="*"
+                element={
+                  <EmptyStatePage
+                    title="페이지를 찾을 수 없어요"
+                    icon={BellIcon}
+                    description={{
+                      headline: "주소가 잘못됐거나 사라진 페이지예요",
+                      body: "홈으로 돌아가서\n다시 찾아보세요",
+                    }}
+                    backTo="/home"
+                  />
+                }
+              />
             </Routes>
           </div>
         </PhoneFrame>

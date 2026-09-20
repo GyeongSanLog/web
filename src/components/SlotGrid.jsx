@@ -10,6 +10,7 @@ import {
   latestAvailableSlotIndex,
   formatSlotLabel,
   formatShortDate,
+  parseServerDateTime,
 } from "../utils/trip";
 
 // ============================================================
@@ -24,36 +25,56 @@ import {
 // 시간 관련 주의사항:
 // - 조회 상한(maxSlotIndex)은 "오늘"이 아니라 여행 상태에 따라 달라짐.
 //   시작 전=0 / 진행중=지금 시각 / 종료됨=endAt 당일 23시.
-// - 정각이 지나면 useHourlyTick으로 화면이 스스로 갱신됨. 예전엔 렌더
+// - 슬롯 경계가 지나면 useSlotBoundaryTick으로 화면이 스스로 갱신됨. 예전엔 렌더
 //   시점에만 시각을 계산해서, 14:50에 열어두고 15:05가 돼도 14시 슬롯에
 //   머물러 있었고 그 상태로 촬영하면 "찍었는데 안 보이는" 상황이 생겼음.
 // ============================================================
 
 /**
- * 정각마다 리렌더를 유발해서 현재 시각을 최신으로 유지하는 훅.
- * setInterval(1분)로 계속 도는 대신, 다음 정각까지만 setTimeout을 걸고
- * 깨어나면 다시 다음 정각을 예약하는 방식 (불필요한 렌더를 줄임).
+ * 슬롯이 바뀌는 순간마다 리렌더를 유발해서 현재 시각을 최신으로 유지하는 훅.
+ * setInterval(1분)로 계속 도는 대신, 다음 슬롯 경계까지만 setTimeout을 걸고
+ * 깨어나면 다시 다음 경계를 예약하는 방식 (불필요한 렌더를 줄임).
+ *
+ * 슬롯 경계는 "정각"이 아니라 startAt 기준이다. 그룹이 12:00에 시작하면
+ * 경계도 매시 정각이지만, 12:30에 시작한 그룹(레거시/외부 생성 데이터)이면
+ * 경계는 매시 30분이다. 예전엔 무조건 정각에만 깨어나서, 그런 그룹은
+ * 슬롯이 넘어가도 화면이 최대 59분 늦게 갱신됐다 — 그 사이 촬영 버튼이
+ * 지난 슬롯에 남아 있어 "찍었는데 안 보이는" 문제로 이어질 수 있었음.
  */
-function useHourlyTick() {
+function useSlotBoundaryTick(startAt) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
     let timerId;
+    const startMs = parseServerDateTime(startAt).getTime();
 
     const scheduleNextTick = () => {
-      const nextHour = new Date();
-      // 다음 정각 + 5초 (시계 오차로 아직 이전 시각으로 읽히는 걸 방지)
-      nextHour.setHours(nextHour.getHours() + 1, 0, 5, 0);
+      const nowMs = Date.now();
+      let delay;
 
+      if (Number.isNaN(startMs)) {
+        // startAt을 못 읽는 경우엔 예전처럼 정각 기준으로 폴백
+        const nextHour = new Date();
+        nextHour.setHours(nextHour.getHours() + 1, 0, 5, 0);
+        delay = nextHour.getTime() - nowMs;
+      } else {
+        // startAt으로부터 경과한 시간을 1시간 단위로 끊어, 다음 경계까지 남은 시간 계산.
+        // +5초는 시계 오차로 아직 이전 슬롯으로 읽히는 걸 방지하기 위한 여유.
+        const elapsed = nowMs - startMs;
+        const nextBoundary = startMs + (Math.floor(elapsed / 3600000) + 1) * 3600000;
+        delay = nextBoundary - nowMs + 5000;
+      }
+
+      // 음수/0이 되면 즉시 재귀 호출로 무한 루프가 될 수 있어 최소값을 둔다
       timerId = setTimeout(() => {
         setNow(new Date());
         scheduleNextTick();
-      }, nextHour.getTime() - Date.now());
+      }, Math.max(delay, 1000));
     };
 
     scheduleNextTick();
     return () => clearTimeout(timerId);
-  }, []);
+  }, [startAt]);
 
   return now;
 }
@@ -68,11 +89,12 @@ function isSameDay(a, b) {
 
 export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId, onOpenClip }) {
   const navigate = useNavigate();
-  const now = useHourlyTick();
+  const now = useSlotBoundaryTick(startAt);
 
   const tripStatus = getTripStatus(startAt, endAt, now);
   const maxSlotIndex = latestAvailableSlotIndex(startAt, endAt, now);
   const minSlotIndex = 0; // 그룹 시작일 이전으로는 못 감
+
 
   const [slotIndex, setSlotIndex] = useState(maxSlotIndex);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -116,10 +138,23 @@ export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId
   }
 
   function handlePickDate(date) {
-    // 선택한 날짜의 00:00으로 이동
+    // 선택한 날짜의 00:00 slot으로 이동 시도.
+    //
+    // [수정 전 버그] slot 0 기준이 자정에서 startAt 시각 자체로 바뀌면서
+    // (그룹이 이제 하루 중 아무 시각에나 시작할 수 있음), 시작일 당일을
+    // 고르면 "그날 00:00"이 startAt(예: 12시)보다 이전이라 음수 slot이
+    // 나왔음. 예: 12시 시작 그룹에서 시작일 당일을 고르면 -12가 나와
+    // minSlotIndex(0)로 잘려서 늘 slot 0(=시작 시각)으로만 이동됐음.
+    //
+    // → 자정이 시작 시각보다 이르면(=시작일 당일) startAt 자체로,
+    //   그 외 날짜는 기존처럼 그날 00:00으로 이동한다.
     const picked = new Date(date);
     picked.setHours(0, 0, 0, 0);
-    const newSlot = dateToSlotIndex(startAt, picked);
+
+    const start = parseServerDateTime(startAt);
+    const target = picked < start ? start : picked;
+
+    const newSlot = dateToSlotIndex(startAt, target);
     setSlotIndex(Math.max(minSlotIndex, Math.min(maxSlotIndex, newSlot)));
     setShowCalendar(false);
   }
@@ -221,9 +256,12 @@ export default function SlotGrid({ startAt, endAt, members, clips, myId, groupId
  * 여행이 끝났으면 endAt까지 전부 선택 가능.
  */
 function MiniCalendar({ startAt, endAt, now, selectedDate, onPick }) {
-  const rangeStart = new Date(startAt);
+  // 여기서는 "그 날짜가 여행 기간 안인지"만 보면 되므로 00:00으로 내려도
+  // 되지만, startAt/endAt 자체는 반드시 parseServerDateTime으로 파싱해야
+  // 함(new Date()로 직접 파싱하면 서버가 Z를 붙여 반환할 때 시차가 생김).
+  const rangeStart = parseServerDateTime(startAt);
   rangeStart.setHours(0, 0, 0, 0);
-  const rangeEnd = new Date(endAt);
+  const rangeEnd = parseServerDateTime(endAt);
   rangeEnd.setHours(0, 0, 0, 0);
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);

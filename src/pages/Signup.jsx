@@ -184,7 +184,9 @@ export default function Signup() {
         name: form.name,
         password: form.password,
       });
-      navigate("/home"); // register 응답에 토큰이 바로 오므로 로그인 화면을 거치지 않고 바로 홈으로
+      // register 응답에 토큰이 바로 오므로 로그인 화면을 거치지 않고 바로 홈으로.
+      // replace: 뒤로가기로 가입 폼에 되돌아오지 않게 함
+      navigate("/home", { replace: true });
     } catch (err) {
       // 이메일 인증 후 30분이 지나면 서버가 다시 거부할 수 있음 —
       // 이 경우 사용자에게 재인증을 안내
@@ -212,16 +214,13 @@ export default function Signup() {
           <p className="text-base font-medium text-[#2A2420]">회원가입</p>
         </div>
 
-        <div className="flex flex-col items-center mb-8">
-          <button
-            onClick={() => console.log("프로필 사진 업로드 TODO")}
-            className="w-20 h-20 rounded-full bg-[#F4EFE6] border border-dashed border-[#C6B9A4] flex items-center justify-center text-2xl text-[#8C8274]"
-            aria-label="프로필 사진 추가"
-          >
-            +
-          </button>
-          <p className="mt-2 text-xs text-[#8C8274]">프로필 사진 (선택)</p>
-        </div>
+        {/* 회원가입 API(POST /api/member/register)에는 프로필 사진 필드가 없음.
+            예전엔 눌러도 아무 반응 없는 "+" 버튼이 있었는데, 가입 후
+            마이페이지 > 프로필 수정(PATCH /api/member/me)에서 올릴 수 있으니
+            여기서는 안내만 한다. */}
+        <p className="text-xs text-[#8C8274] mb-6">
+          프로필 사진은 가입 후 마이페이지에서 설정할 수 있어요
+        </p>
 
         <div className="flex flex-col gap-4">
 
@@ -356,7 +355,7 @@ export default function Signup() {
               type="password"
               value={form.password}
               onChange={update("password")}
-              placeholder="8자 이상, 영문+숫자+특수문자"
+              placeholder="8자 이상"
               className={`${inputClass} ${pwTooShort ? "border-[#d70015]" : ""}`}
             />
             {pwTooShort && (

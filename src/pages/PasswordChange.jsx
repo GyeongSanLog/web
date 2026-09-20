@@ -94,7 +94,7 @@ export default function PasswordChange() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="8자 이상, 영문+숫자+특수문자"
+                  placeholder="8자 이상"
                   className={`${inputClass} ${pwTooShort ? "border-[#d70015]" : ""}`}
                 />
                 {pwTooShort && (
