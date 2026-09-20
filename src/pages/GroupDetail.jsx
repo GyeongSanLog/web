@@ -10,6 +10,7 @@ import {
 import { fetchMyInfo } from "../api/member";
 import SlotGrid from "../components/SlotGrid";
 import SectionTitle from "../components/SectionTitle";
+import MergedVideoSection from "../components/MergedVideoSection";
 import {
   TRIP_BEFORE,
   TRIP_ENDED,
@@ -42,10 +43,9 @@ export default function GroupDetail() {
   // 클립 재생 모달 상태
   const [openClip, setOpenClip] = useState(null);
 
+  // loading/error를 effect에서 리셋하지 않는 이유: App.jsx에서
+  // <GroupDetail key={groupId}>로 렌더링해서 groupId가 바뀌면 새로 마운트됨.
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
     Promise.all([
       fetchGroupInfo(groupId),
       fetchMyInfo(),
@@ -217,6 +217,21 @@ export default function GroupDetail() {
             myId={myId}
             groupId={groupId}
             onOpenClip={setOpenClip}
+          />
+
+          {/* 공유용 병합 영상 - 여행 종료 후 서버가 자동으로 만들어줌.
+              상태(NOT_STARTED/PROCESSING/DONE/FAILED)별 화면, 진행 중 자동 새로고침,
+              저장/공유는 MergedVideoSection이 알아서 처리함.
+              groupId가 바뀌면 상태를 새로 잡도록 key를 지정 (상태를 컴포넌트가
+              내부에 들고 있어서, 다른 그룹으로 이동했을 때 이전 값이 남는 걸 방지) */}
+          <MergedVideoSection
+            key={groupId}
+            groupId={groupId}
+            groupName={info.name}
+            isTripEnded={isTripEnded}
+            initialStatus={info.mergeStatus}
+            initialVideoUrl={info.mergedVideoUrl}
+            onAuthExpired={() => navigate("/login")}
           />
 
           {/* 받은 편지 - 여행이 끝난 뒤에만 공개 */}

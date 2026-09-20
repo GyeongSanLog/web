@@ -7,27 +7,45 @@
 // - createGroup
 //     → POST /api/group 실제 연동 완료
 // - joinGroupByInviteCode
-//     → POST /api/group/invite/{inviteCode}/join 실제 연동 완료 (오늘 신규)
+//     → POST /api/group/invite/{inviteCode}/join 실제 연동 완료
 //     → 화면 연결은 아직 안 함 (참여 화면 위치 미정)
 // - fetchGroupInfo
-//     → GET /api/group/{groupId} 실제 연동 완료 (그룹정보+멤버)
+//     → GET /api/group/{groupId} 실제 연동 완료 (그룹정보+멤버+병합 상태)
+// - retryMerge                                                 ← 신규
+//     → POST /api/group/{groupId}/merge/retry 실제 연동 완료
+//     → 공유용 병합 영상이 FAILED일 때 다시 만들기 (MergedVideoSection에서 사용)
 // - withdrawFromGroup
 //     → DELETE /api/group/{groupId}/withdraw 실제 연동 완료
 // - fetchGroupClips / uploadClip
-//     → GET,POST /api/log/{groupId} 실제 연동 완료 (오늘 신규, clip 태그)
+//     → GET,POST /api/log/{groupId} 실제 연동 완료 (clip 태그)
 // - writeLetter / fetchMyLetters / fetchLetter
-//     → /api/log/{groupId}/letter 등 실제 연동 완료 (오늘 신규, letter 태그)
-// - fetchGroupDetail(클립/편지 목데이터 버전 - 이제 위 실제 API로 대체됨,
-//   호환을 위해 당분간 남겨둠) / fetchGroupSessions / uploadSetlog(셋로그 세션)
-//     → 아직 명세 미확정, 목데이터 유지
+//     → /api/log/{groupId}/letter 등 실제 연동 완료 (letter 태그)
+// - fetchGroupSessions(셋로그 분할화면 세션)
+//     → 보류 중인 SetlogViewer.jsx 전용 목데이터. 라우트에서 빠져 있어
+//       실제로는 호출되지 않지만, 뷰어를 되살릴 때를 위해 남겨둠.
 //
-// 실제 연동된 함수와 목데이터 함수가 한 파일에 같이 있으니,
-// 나중에 헷갈리지 않도록 각 함수 위에 상태를 주석으로 남겨둠.
+// (예전에 있던 fetchGroupDetail / uploadSetlog 목데이터와 src/api.js는
+//  어디서도 안 쓰여서 정리함)
 // ============================================================
 
 import { BASE_URL, authFetch } from "./client";
+import { parseServerDateTime } from "../utils/trip";
 
 const delay = (ms = 300) => new Promise((res) => setTimeout(res, ms));
+
+/**
+ * 공유용 병합 영상의 진행 상태 (서버 스웨거 enum과 정확히 일치해야 함)
+ *
+ *   NOT_STARTED → PROCESSING → DONE
+ *                           ↘ FAILED (→ retryMerge로 다시 시도 가능)
+ *
+ * 주의: 완료 상태 이름은 COMPLETED가 아니라 "DONE"임.
+ * 문자열을 화면 곳곳에 직접 쓰면 오타 나기 쉬워서 상수로 묶어둠.
+ */
+export const MERGE_NOT_STARTED = "NOT_STARTED";
+export const MERGE_PROCESSING = "PROCESSING";
+export const MERGE_DONE = "DONE";
+export const MERGE_FAILED = "FAILED";
 
 // --- 아직 목데이터인 부분 (그룹 상세 / 세션 / 업로드) ---
 
@@ -44,34 +62,6 @@ const mockOngoingGroup = {
   endAt: "2026-08-04",
   memberCount: 3,
   imageUrl: "",
-};
-
-const mockClipsByGroup = {
-  100: [
-    { id: 1, capturedAt: "14:32", authorName: "신유진", caption: "협재 바다 진짜 예쁘다", videoUrl: "" },
-    { id: 2, capturedAt: "11:05", authorName: "김민지", caption: "숙소 체크인 완료!", videoUrl: "" },
-    { id: 3, capturedAt: "09:40", authorName: "이현우", caption: "출발 전 공항에서", videoUrl: "" },
-  ],
-  101: [
-    { id: 4, capturedAt: "15:10", authorName: "신유진", caption: "불국사 도착", videoUrl: "" },
-    { id: 5, capturedAt: "12:20", authorName: "김민지", caption: "점심은 국밥", videoUrl: "" },
-  ],
-  102: [
-    { id: 6, capturedAt: "20:00", authorName: "신유진", caption: "해운대 야경", videoUrl: "" },
-    { id: 7, capturedAt: "13:15", authorName: "이현우", caption: "돼지국밥 맛집 발견", videoUrl: "" },
-    { id: 8, capturedAt: "10:00", authorName: "김민지", caption: "출발!", videoUrl: "" },
-  ],
-  103: [{ id: 9, capturedAt: "16:40", authorName: "신유진", caption: "경포호 벚꽃길", videoUrl: "" }],
-};
-
-const mockLettersByGroup = {
-  100: [
-    { id: 1, authorName: "김민지", message: "오늘 진짜 재밌었어 ㅎㅎ" },
-    { id: 2, authorName: "이현우", message: "내일 일정도 기대된다" },
-  ],
-  101: [],
-  102: [{ id: 3, authorName: "이현우", message: "다음에 또 같이 오자!" }],
-  103: [],
 };
 
 const mockSessionsByGroup = {
@@ -148,64 +138,100 @@ export async function fetchGroupList() {
 }
 
 /**
- * 갤러리 메인 조회 - 진행중인 여행 1개 + 예정된 여행 + 지난 여행 목록
+ * 갤러리 메인 조회 - 진행중인 여행 목록 + 예정된 여행 + 지난 여행 목록
  *
  * 서버는 구분 없이 배열 하나만 주므로, 오늘 날짜 기준으로 프론트에서 나눈다.
- *   ongoing  : startAt <= 지금 <= endAt  (여러 개면 가장 최근 시작한 1개만.
- *              화면 구조상 진행중은 1개만 표시되기 때문에 나머지는 past로)
+ *   ongoing  : startAt <= 지금 <= endAt  (동시에 여러 개 진행될 수 있음 —
+ *              그룹 정원 10명 제한만 있을 뿐 "진행중 1개" 같은 서버 규칙은
+ *              없으므로, 전부 배열로 반환하고 화면에서 나란히 보여준다.
+ *              최근 시작한 순으로 정렬)
  *   upcoming : 지금 < startAt            (아직 시작 전, 시작일 빠른 순)
- *   past     : endAt < 지금 또는 ongoing에서 밀려난 것 (최근 시작 순)
+ *   past     : endAt < 지금              (최근 시작 순)
  *
- * [수정 전 버그] 예전엔 ongoing이 아닌 걸 전부 past에 넣어서, 다음 주에
- * 시작하는 여행이 "지난 여행 기록" 아래 그 달 섹션에 들어갔음.
+ * [수정 이력]
+ * - 예전엔 ongoing이 아닌 걸 전부 past에 넣어서, 다음 주에 시작하는 여행이
+ *   "지난 여행 기록"에 들어갔음 → upcoming으로 분리.
+ * - 그다음엔 ongoing이 여러 개일 때 가장 최근 것 1개만 남기고 나머지를
+ *   past로 보내서, 기간이 안 끝난 진행중 여행이 "지난 여행"에 뜨는 문제가
+ *   있었음 → ongoing을 배열로 바꿔 전부 유지하도록 수정.
  */
 export async function fetchGallery() {
   const groups = await fetchGroupList();
 
+  // parseServerDateTime을 쓰는 이유: 서버가 startAt/endAt에 "Z"를 붙여
+  // 돌려주더라도 그건 진짜 UTC가 아니라 한국시간 값 표시일 뿐이라,
+  // new Date()로 그냥 파싱하면 9시간 어긋나 진행중인 여행이 "예정"이나
+  // "지난 여행"으로 잘못 분류된다 (utils/trip.js 주석 참고).
   const now = new Date();
-  const byStartDesc = (a, b) => new Date(b.startAt) - new Date(a.startAt);
-  const byStartAsc = (a, b) => new Date(a.startAt) - new Date(b.startAt);
+  const startOf = (g) => parseServerDateTime(g.startAt);
+  const endOf = (g) => parseServerDateTime(g.endAt);
+  const byStartDesc = (a, b) => startOf(b) - startOf(a);
+  const byStartAsc = (a, b) => startOf(a) - startOf(b);
 
-  const ongoingCandidates = groups.filter((g) => {
-    const start = new Date(g.startAt);
-    const end = new Date(g.endAt);
-    return start <= now && now <= end;
-  });
-
-  const ongoing =
-    ongoingCandidates.length > 0 ? [...ongoingCandidates].sort(byStartDesc)[0] : null;
+  const ongoing = groups
+    .filter((g) => startOf(g) <= now && now <= endOf(g))
+    .sort(byStartDesc);
 
   const upcoming = groups
-    .filter((g) => now < new Date(g.startAt))
+    .filter((g) => now < startOf(g))
     .sort(byStartAsc);
 
-  const upcomingIds = new Set(upcoming.map((g) => g.id));
   const past = groups
-    .filter((g) => (!ongoing || g.id !== ongoing.id) && !upcomingIds.has(g.id))
+    .filter((g) => endOf(g) < now)
     .sort(byStartDesc);
 
   return { ongoing, upcoming, past };
 }
 
 /**
- * 진행중인 여행 그룹 조회 (하단 네비바 + 버튼 클릭 시 사용)
+ * 진행중인 여행 그룹 목록 조회 (하단 네비바 + 버튼 클릭 시 사용).
+ * "진행중인 여행 없음" 판단과, 여러 개면 어디로 보낼지 고르는 데 쓰임.
  */
-export async function fetchOngoingGroup() {
+export async function fetchOngoingGroups() {
   const { ongoing } = await fetchGallery();
   return ongoing;
 }
 
 /**
- * 날짜 input(YYYY-MM-DD)에서 받은 값을 서버가 요구하는 date-time 형식으로 변환.
- * 서버 스펙상 startAt/endAt이 date-time이라 날짜만 보내면 400이 날 수 있음.
- * 시작일은 그날 00:00:00, 종료일은 그날 23:59:59로 맞춰서
- * "여행 기간 전체"가 자연스럽게 포함되도록 함.
+ * datetime-local input(YYYY-MM-DDTHH:mm, 한국시간 기준 값)에서 받은 값을
+ * 서버가 요구하는 date-time 형식으로 변환.
+ *
+ * [2026-09-20 시차 버그 수정]
+ * 실제 로그 시차(9시간, 항상 같은 방향)를 진단해보니 원인이 확인됨:
+ * 서버에 타임존 표시 없는 값("...T09:00:00")을 보내면, 서버는 이걸
+ * UTC로 해석해서 slotIndex를 계산함(즉 실제로는 한국시간 18:00을
+ * 슬롯 0으로 잡음). 반면 브라우저는 같은 문자열을 로컬(KST)로 해석해서
+ * "한국시간 09:00"으로 읽음 → 프론트와 서버가 서로 다른 시각을 기준점
+ * 으로 삼아 slotIndex가 9시간만큼 어긋났음.
+ *
+ * capturedAt(Camera.jsx의 toLocalIsoString)에서 이미 같은 서버 동작이
+ * 확인된 적이 있어서, 여기도 같은 방식으로 맞춤: 한국시간 값의 시:분:초
+ * 숫자는 그대로 두고 끝에 "Z"만 붙여 보낸다. 그러면 서버가 이 값을
+ * UTC로 착각해도, 그 착각한 해석이 결국 사용자가 실제로 고른 한국시간
+ * 값과 숫자가 같아져서 slotIndex가 올바르게 계산됨.
+ *
+ * ⚠️ 이건 "진짜 UTC 변환"이 아니라 서버 동작에 맞춘 임시 처리임.
+ * 서버가 타임존 오프셋을 올바르게 파싱하도록 고쳐지면(datetime-local
+ * 값에 +09:00을 붙여 보내는 정공법으로), 이 함수를 되돌려야 함.
+ *
+ * (GroupNew.jsx에서 분 단위는 입력받지 않고 항상 "00"으로 넘어옴.
+ *  과거 버전과의 호환을 위해, 시:분 없이 날짜만 들어오면 시작일은
+ *  00:00:00, 종료일은 23:59:59로 채운 뒤 동일하게 Z를 붙인다.)
  */
 function toDateTime(dateStr, endOfDay = false) {
   if (!dateStr) return dateStr;
-  // 이미 시간까지 포함된 값이면 그대로 사용
-  if (dateStr.includes("T")) return dateStr;
-  return endOfDay ? `${dateStr}T23:59:59` : `${dateStr}T00:00:00`;
+
+  let value = dateStr;
+  if (!value.includes("T")) {
+    // 날짜만 있는 값(과거 호환) — 시작/종료 기준으로 시각을 채움
+    value = endOfDay ? `${value}T23:59:59` : `${value}T00:00:00`;
+  } else if (value.length === 16) {
+    // datetime-local 값(YYYY-MM-DDTHH:mm)은 초가 없으므로 붙여준다
+    value = `${value}:00`;
+  }
+
+  // 이미 타임존 표시(Z 또는 오프셋)가 붙어있으면 중복으로 붙이지 않음
+  return /Z|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
 }
 
 /**
@@ -309,15 +335,17 @@ export async function joinGroupByInviteCode(inviteCode) {
  * - 여기서 memberCount는 members.length로 계산해서 쓰면 됨
  * - inviteCode가 여기 있으므로, 그룹장이 초대코드를 보여주는 화면은
  *   이 API 응답을 쓰면 됨
- * - 클립/편지 목록은 이 API에 없음 → 아래 fetchGroupDetail(목데이터)이
- *   그 역할을 대신하고 있으며, 나중에 명세 확정되면 별도로 실제 연동 예정.
- *   화면에서 클립/편지까지 같이 필요하면 이 함수와 fetchGroupDetail을
- *   Promise.all로 함께 호출해서 합치는 방식을 추천.
+ * - 클립/편지 목록은 이 API에 없음 → fetchGroupClips / fetchMyLetters를
+ *   Promise.all로 함께 호출해서 합치면 됨 (GroupDetail.jsx 참고)
+ * - mergeStatus(NOT_STARTED/PROCESSING/DONE/FAILED)와 mergedVideoUrl도
+ *   이 응답에 들어있음. 병합이 진행 중일 때는 MergedVideoSection이
+ *   이 함수를 주기적으로 다시 호출(폴링)해서 상태 변화를 감지함.
  */
 export async function fetchGroupInfo(groupId) {
   const res = await authFetch(`${BASE_URL}/api/group/${groupId}`);
 
   if (!res.ok) {
+    if (res.status === 401) throw new Error("AUTH_EXPIRED");
     if (res.status === 403) {
       throw new Error("그룹 멤버만 조회할 수 있어요");
     }
@@ -325,6 +353,42 @@ export async function fetchGroupInfo(groupId) {
   }
 
   return res.json(); // GroupDetailResponse
+}
+
+/**
+ * 공유용 병합 영상 다시 만들기 (병합 재시도)
+ * POST /api/group/{groupId}/merge/retry
+ * 인증 필요 → authFetch 사용
+ *
+ * 서버는 병합을 자동으로 시작하므로 "처음 만들기" API는 없고,
+ * 이 API는 mergeStatus가 FAILED일 때 다시 시도하는 용도로만 존재함.
+ *
+ * Request body: 없음
+ * Response:
+ *   202 접수됨 — 백그라운드에서 병합 시작. 결과는 fetchGroupInfo의
+ *                mergeStatus로 확인 (PROCESSING → DONE / FAILED)
+ *   404 그룹이 없거나 그룹 멤버가 아님
+ *   409 여행이 아직 안 끝났거나, FAILED 상태가 아님
+ *   503 병합 작업 대기열이 가득 참 (잠시 후 다시 시도)
+ *
+ * 응답 바디가 없는 202라서 res.json()을 부르지 않음.
+ */
+export async function retryMerge(groupId) {
+  const res = await authFetch(`${BASE_URL}/api/group/${groupId}/merge/retry`, {
+    method: "POST",
+  });
+
+  if (res.ok) return { success: true }; // 202
+
+  if (res.status === 401) throw new Error("AUTH_EXPIRED");
+  if (res.status === 404) throw new Error("그룹을 찾을 수 없어요");
+  if (res.status === 409) {
+    throw new Error("지금은 다시 만들 수 없는 상태예요");
+  }
+  if (res.status === 503) {
+    throw new Error("요청이 많아요. 잠시 후 다시 시도해주세요");
+  }
+  throw new Error("영상 다시 만들기에 실패했어요");
 }
 
 /**
@@ -406,7 +470,12 @@ export async function uploadClip({ groupId, videoBlob, comment, capturedAt }) {
     { type: "application/json" }
   );
   formData.append("request", requestBlob);
-  formData.append("file", videoBlob, "clip.webm");
+
+  // 파일명 확장자는 Blob의 실제 타입에 맞춘다.
+  // iOS 사파리는 MediaRecorder가 mp4를 뱉는데, 예전엔 무조건 "clip.webm"으로
+  // 보내서 확장자와 내용물이 어긋났음.
+  const ext = /mp4/i.test(videoBlob?.type ?? "") ? "mp4" : "webm";
+  formData.append("file", videoBlob, `clip.${ext}`);
 
   const res = await authFetch(`${BASE_URL}/api/log/${groupId}`, {
     method: "POST",
@@ -492,30 +561,8 @@ export async function fetchLetter(groupId, letterId) {
 }
 
 // ============================================================
-// 🔲 아직 목데이터 (명세 미확정 — 셋로그 분할화면 세션)
+// 🔲 목데이터 — 보류 중인 SetlogViewer.jsx 전용 (라우트 미연결)
 // ============================================================
-
-/**
- * 그룹 상세 조회 (클립 목록 + 편지 목록) — 아직 목데이터
- * 실제 API 명세 미확정. 그룹 자체 정보/멤버는 fetchGroupInfo()를 사용할 것.
- */
-export async function fetchGroupDetail(groupId) {
-  // TODO: 실제 연동 시 아래 fetch로 교체
-  // const res = await authFetch(`${BASE_URL}/api/group/${groupId}`);
-  // return res.json();
-
-  await delay();
-
-  const id = Number(groupId);
-  const group = mockOngoingGroup.id === id ? mockOngoingGroup : mockGroups.find((g) => g.id === id);
-  if (!group) throw new Error("존재하지 않는 여행 그룹입니다");
-
-  return {
-    group,
-    clips: mockClipsByGroup[id] ?? [],
-    letters: mockLettersByGroup[id] ?? [],
-  };
-}
 
 /**
  * 그룹의 셋로그 세션 목록 조회 (분할 화면 재생용)
@@ -535,23 +582,4 @@ export async function fetchGroupSessions(groupId) {
     group,
     sessions: mockSessionsByGroup[id] ?? [],
   };
-}
-
-/**
- * 셋로그 업로드 (촬영 완료 후)
- */
-export async function uploadSetlog({ groupId, videoBlob, caption }) {
-  // TODO: 실제 연동 시 FormData로 영상 파일 업로드 + authFetch 사용
-  // const formData = new FormData();
-  // formData.append("video", videoBlob);
-  // formData.append("caption", caption);
-  // const res = await authFetch(`${BASE_URL}/api/group/${groupId}/setlogs`, {
-  //   method: "POST",
-  //   body: formData,
-  // });
-  // return res.json();
-
-  await delay(600);
-  console.log("셋로그 업로드 (mock):", { groupId, caption });
-  return { success: true };
 }

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { NotificationsContext } from "./notifications-context";
 import { onMessage, getToken } from "firebase/messaging";
 import { getMessagingIfSupported, VAPID_KEY } from "../firebase";
 import { updateFcmToken } from "../api/member";
@@ -22,6 +23,13 @@ import {
 // 나중에 서버 이력 API가 생기면 이 파일의 저장 로직만 교체하면 되고,
 // 컴포넌트 쪽은 안 건드려도 되도록 함수 인터페이스를 유지했다.
 //
+// [파일 구성]
+//   - notifications-context.js : createContext 객체
+//   - NotificationsContext.jsx: Provider (이 파일)
+//   - useNotifications.js     : 화면에서 쓰는 훅
+//   컴포넌트 파일에 컴포넌트 외의 export가 섞이면 Vite Fast Refresh가
+//   동작하지 않아서(react-refresh/only-export-components) 셋으로 나눔.
+//
 // [수신 경로가 두 개인 이유]
 //   - 포그라운드(앱 켜둔 상태): 이 파일의 onMessage. 브라우저가 알림을
 //     자동으로 띄워주지 않으므로 직접 목록에 쌓는다.
@@ -31,8 +39,6 @@ import {
 
 // 저장 키는 utils/notificationStorage.js에 있음 (로그아웃 시 api 레이어가 같은 키를 지워야 해서)
 const MAX_STORED = 50; // 무한정 쌓이지 않게 최근 50개만 보관
-
-const NotificationsContext = createContext(null);
 
 function loadFromStorage() {
   try {
@@ -244,12 +250,4 @@ export function NotificationsProvider({ children }) {
       {children}
     </NotificationsContext.Provider>
   );
-}
-
-export function useNotifications() {
-  const ctx = useContext(NotificationsContext);
-  if (!ctx) {
-    throw new Error("useNotifications는 NotificationsProvider 안에서만 쓸 수 있습니다");
-  }
-  return ctx;
 }

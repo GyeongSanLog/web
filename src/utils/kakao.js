@@ -68,6 +68,13 @@ export function loadKakaoSdk() {
     document.head.appendChild(script);
   });
 
+  // 실패했으면 다음 클릭 때 다시 시도할 수 있도록 캐시를 비운다.
+  // (예전엔 한 번 실패하면 거부된 Promise가 계속 재사용돼서 새로고침 전까지
+  //  "카카오로 계속하기"가 영영 안 됐음 — kakaoMap.js와 같은 처리로 맞춤)
+  sdkLoadingPromise.catch(() => {
+    sdkLoadingPromise = null;
+  });
+
   return sdkLoadingPromise;
 }
 

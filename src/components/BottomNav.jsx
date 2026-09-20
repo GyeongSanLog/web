@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { fetchOngoingGroup } from "../api/groups";
+import { fetchOngoingGroups } from "../api/groups";
 
 const navItems = [
   { to: "/home", label: "홈", icon: HomeIcon },
@@ -18,16 +18,24 @@ export default function BottomNav() {
     if (checking) return; // 중복 클릭 방지
     setChecking(true);
     try {
-      const ongoing = await fetchOngoingGroup();
-      if (ongoing) {
-        // 진행중인 그룹이 있으면 그 그룹으로 바로 촬영 화면 진입
-        // (Camera.jsx가 이제 groupId를 경로 파라미터로 받는 구조로 변경됨)
-        navigate(`/camera/${ongoing.id}`);
+      const ongoing = await fetchOngoingGroups();
+      if (ongoing.length === 1) {
+        // 진행중인 그룹이 정확히 하나면 그 그룹으로 바로 촬영 화면 진입
+        // (Camera.jsx가 groupId를 경로 파라미터로 받는 구조)
+        navigate(`/camera/${ongoing[0].id}`);
+      } else if (ongoing.length > 1) {
+        // 동시에 여러 그룹이 진행 중이면 여기서 임의로 하나를 고르지 않고,
+        // 갤러리에서 어느 그룹에 남길지 직접 선택하게 한다.
+        navigate("/gallery");
       } else {
         // 없으면 새 그룹 생성 여부를 묻는 모달 표시
         setShowNoGroupModal(true);
       }
     } catch (err) {
+      if (err.message === "AUTH_EXPIRED") {
+        navigate("/login");
+        return;
+      }
       console.error("진행중인 그룹 조회 실패:", err);
     } finally {
       setChecking(false);

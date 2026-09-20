@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import AppHeader from "../components/AppHeader";
 import SectionTitle, { LeafMark } from "../components/SectionTitle";
 import { fetchGallery, joinGroupByInviteCode } from "../api/groups";
+import { formatShortDate, parseServerDateTime } from "../utils/trip";
 
 /**
  * 지난 여행 타일에 아직 대표 사진이 없을 때 쓰는 배경.
@@ -19,7 +20,7 @@ const TILE_SCENES = [
 
 export default function Gallery() {
   const navigate = useNavigate();
-  const [ongoing, setOngoing] = useState(null);
+  const [ongoing, setOngoing] = useState([]); // 동시에 여러 개 진행될 수 있음
   const [upcoming, setUpcoming] = useState([]); // 아직 시작 전인 여행
   const [past, setPast] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,28 +30,30 @@ export default function Gallery() {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
 
-  function loadGallery() {
-    setLoading(true);
-    fetchGallery()
-      .then((res) => {
-        setOngoing(res.ongoing);
-        setUpcoming(res.upcoming ?? []);
-        setPast(res.past);
-      })
-      .catch((err) => {
-        if (err.message === "AUTH_EXPIRED") {
-          navigate("/login");
-          return;
-        }
-        console.error("갤러리 로드 실패:", err);
-      })
-      .finally(() => setLoading(false));
-  }
+  // 목록을 받아와 상태에 반영. loading은 여기서 건드리지 않는다 —
+  // 첫 로드는 초기값 true로 시작하고, 참여 후 새로고침은 handleJoin이 직접 올린다.
+  // (effect 안에서 setState를 동기 호출하지 않기 위한 분리)
+  const fetchAndApply = useCallback(
+    () =>
+      fetchGallery()
+        .then((res) => {
+          setOngoing(res.ongoing ?? []);
+          setUpcoming(res.upcoming ?? []);
+          setPast(res.past);
+        })
+        .catch((err) => {
+          if (err.message === "AUTH_EXPIRED") {
+            navigate("/login");
+            return;
+          }
+          console.error("갤러리 로드 실패:", err);
+        }),
+    [navigate]
+  );
 
   useEffect(() => {
-    loadGallery();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchAndApply().finally(() => setLoading(false));
+  }, [fetchAndApply]);
 
   async function handleJoin() {
     const code = inviteCode.trim();
@@ -64,7 +67,10 @@ export default function Gallery() {
       await joinGroupByInviteCode(code);
       setShowJoinModal(false);
       setInviteCode("");
-      loadGallery(); // 참여 성공 후 목록에 반영되도록 갤러리 새로고침
+      // 참여 성공 후 목록에 반영되도록 갤러리 새로고침
+      setLoading(true);
+      await fetchAndApply();
+      setLoading(false);
     } catch (err) {
       if (err.message === "AUTH_EXPIRED") {
         navigate("/login");
@@ -110,17 +116,21 @@ export default function Gallery() {
               <span className="w-1.5 h-1.5 rounded-full bg-[#B04A46] animate-pulse" />
               <p className="text-xs text-[#6B6156] font-medium">진행중인 log</p>
             </div>
-            <div className="flex gap-2.5 mb-7 gs-stagger">
-              {ongoing ? (
+            {/* 동시에 진행중인 여행이 여러 개일 수 있어 가로스크롤로 나열한다.
+                (예전엔 가장 최근 시작한 1개만 여기 보여주고 나머지는 "지난 여행"
+                으로 밀려나서, 기간이 안 끝난 여행이 종료된 것처럼 보였음) */}
+            <div className="flex gap-2.5 mb-7 overflow-x-auto -mx-5 px-5 pb-1 scrollbar-hide gs-stagger">
+              {ongoing.map((g) => (
                 <button
-                  onClick={() => navigate(`/gallery/${ongoing.id}`)}
+                  key={g.id}
+                  onClick={() => navigate(`/gallery/${g.id}`)}
                   className="w-[130px] h-[130px] rounded-2xl bg-gradient-to-br from-[#4B6B4E] to-[#2C4330] border-[1.5px] border-[#8B4A26] relative flex items-end p-2.5 text-left overflow-hidden shrink-0 gs-press shadow-sm shadow-[#2C4330]/25"
                 >
                   {/* 그룹 생성 시 올린 썸네일이 있으면 그걸, 없으면 능선+저녁 해 장식을 깐다 */}
-                  {ongoing.imageUrl ? (
+                  {g.imageUrl ? (
                     <img
-                      src={ongoing.imageUrl}
-                      alt={ongoing.name}
+                      src={g.imageUrl}
+                      alt={g.name}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
@@ -136,14 +146,14 @@ export default function Gallery() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
                   <div className="relative">
                     <p className="text-[13px] font-medium text-white leading-tight">
-                      {ongoing.name}
+                      {g.name}
                     </p>
                     <p className="text-[11px] text-white/75 mt-0.5">
-                      {formatShortDate(ongoing.startAt)} ~ {formatShortDate(ongoing.endAt)}
+                      {formatShortDate(g.startAt)} ~ {formatShortDate(g.endAt)}
                     </p>
                   </div>
                 </button>
-              ) : null}
+              ))}
 
               <button
                 onClick={() => navigate("/gallery/new")}
@@ -153,7 +163,7 @@ export default function Gallery() {
                   <PlusIcon />
                 </span>
                 <span className="text-[11px] text-[#6B6156] text-center leading-tight px-2">
-                  {ongoing ? "새 여행\n그룹 만들기" : "진행중인 여행이\n없으면\n그룹 만들기"}
+                  {ongoing.length > 0 ? "새 여행\n그룹 만들기" : "진행중인 여행이\n없으면\n그룹 만들기"}
                 </span>
               </button>
             </div>
@@ -364,7 +374,7 @@ function GallerySkeleton() {
 function groupByMonth(groups) {
   const map = {};
   groups.forEach((g) => {
-    const d = new Date(g.startAt);
+    const d = parseServerDateTime(g.startAt);
     const key = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
     if (!map[key]) map[key] = [];
     map[key].push(g);
@@ -374,16 +384,16 @@ function groupByMonth(groups) {
     .map(([month, items]) => ({ month, items }));
 }
 
-function formatShortDate(dateStr) {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
-}
+// formatShortDate는 utils/trip.js 것을 사용 (여기서 new Date()로 직접
+// 파싱하면, 서버가 Z를 붙여 돌려줄 때 시차 버그가 재발하기 때문 —
+// createGroup이 시차 버그 수정으로 Z를 붙여 보내게 되면서 응답도 Z가
+// 붙어 돌아올 수 있어, 반드시 parseServerDateTime을 거쳐야 함)
 
 /** 시작일까지 남은 날 — "내일 시작" / "3일 후 시작" */
 function daysUntil(dateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const start = new Date(dateStr);
+  const start = parseServerDateTime(dateStr);
   start.setHours(0, 0, 0, 0);
   const days = Math.round((start - today) / (1000 * 60 * 60 * 24));
   if (days <= 0) return "곧 시작";

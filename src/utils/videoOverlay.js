@@ -100,9 +100,11 @@ function drawOverlay(ctx, width, height, { timeLabel, caption }) {
 
 /**
  * 녹화에 쓸 mimeType을 브라우저 지원 여부에 따라 고름.
- * (사파리는 webm을 못 만드는 경우가 있어 mp4로 폴백)
+ * 크롬/안드로이드는 webm, iOS 사파리는 webm을 못 만들어 mp4로 폴백.
+ * Camera.jsx(원본 녹화)와 여기(합성 재녹화) 둘 다 이 함수를 써서,
+ * 어느 브라우저에서든 Blob의 type이 실제 담긴 포맷과 일치하게 한다.
  */
-function pickMimeType() {
+export function pickMimeType() {
   const candidates = [
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
@@ -117,9 +119,6 @@ function pickMimeType() {
   return "";
 }
 
-/**
- * capturedAt(ISO 문자열)을 "14:32" 형태로 변환
- */
 /**
  * capturedAt(ISO 문자열)을 "14:32" 형태로 변환.
  *
@@ -161,7 +160,6 @@ export async function burnOverlayIntoVideo(videoBlob, { caption = "", capturedAt
 
   const timeLabel = formatTimeLabel(capturedAt);
   const objectUrl = URL.createObjectURL(videoBlob);
-  console.log("[burnOverlay] 시작", { blobSize: videoBlob.size, blobType: videoBlob.type });
 
   try {
     const video = document.createElement("video");
@@ -170,21 +168,14 @@ export async function burnOverlayIntoVideo(videoBlob, { caption = "", capturedAt
     video.playsInline = true;
 
     // 메타데이터(가로/세로 크기, 길이)가 준비될 때까지 대기
-    console.log("[burnOverlay] 메타데이터 대기 시작");
     await new Promise((resolve, reject) => {
       video.onloadedmetadata = () => resolve();
       video.onerror = () => reject(new Error("영상을 읽을 수 없습니다"));
-    });
-    console.log("[burnOverlay] 메타데이터 로드됨", {
-      width: video.videoWidth,
-      height: video.videoHeight,
-      duration: video.duration,
     });
 
     const width = video.videoWidth;
     const height = video.videoHeight;
     if (!width || !height) {
-      console.warn("[burnOverlay] videoWidth/Height가 0 - 원본 반환");
       return videoBlob;
     }
 
@@ -198,19 +189,16 @@ export async function burnOverlayIntoVideo(videoBlob, { caption = "", capturedAt
       typeof canvas.captureStream !== "function" ||
       typeof MediaRecorder === "undefined"
     ) {
-      console.warn("이 브라우저는 영상 합성을 지원하지 않아 원본을 업로드합니다");
       return videoBlob;
     }
 
     const canvasStream = canvas.captureStream(30);
-    console.log("[burnOverlay] canvasStream 생성됨 (영상만, 무음)");
 
     // 셋로그 클립은 소리가 필요 없어서, 오디오 트랙은 아예 합성하지 않음.
     // (애초에 Camera.jsx에서 audio: false로 녹화하기 때문에 원본에도
     // 오디오 트랙이 없지만, 혹시 남아있더라도 여기서 의도적으로 제외함)
 
     const mimeType = pickMimeType();
-    console.log("[burnOverlay] 선택된 mimeType:", mimeType || "(기본값)");
     const recorder = new MediaRecorder(
       canvasStream,
       mimeType ? { mimeType } : undefined
@@ -222,36 +210,28 @@ export async function burnOverlayIntoVideo(videoBlob, { caption = "", capturedAt
 
     const recordingDone = new Promise((resolve) => {
       recorder.onstop = () => {
-        console.log("[burnOverlay] recorder onstop, chunk 개수:", chunks.length);
         resolve(new Blob(chunks, { type: mimeType || "video/webm" }));
       };
     });
 
     recorder.start();
-    console.log("[burnOverlay] recorder.start() 호출됨, state:", recorder.state);
 
     // 프레임마다 원본 영상 + 오버레이를 캔버스에 그림
     let rafId = null;
-    let frameCount = 0;
     const renderFrame = () => {
       if (video.paused || video.ended) return;
       ctx.drawImage(video, 0, 0, width, height);
       drawOverlay(ctx, width, height, { timeLabel, caption: caption.trim() });
-      frameCount += 1;
       rafId = requestAnimationFrame(renderFrame);
     };
 
-    console.log("[burnOverlay] video.play() 호출 직전");
     await video.play();
-    console.log("[burnOverlay] video.play() 완료, paused:", video.paused);
     renderFrame();
 
     // 영상이 끝나면 녹화 종료 (혹시 onended가 안 불릴 경우를 대비해 타임아웃도 같이 검)
-    console.log("[burnOverlay] onended 대기 시작");
     await Promise.race([
       new Promise((resolve) => {
         video.onended = () => {
-          console.log("[burnOverlay] video onended 발생");
           resolve();
         };
       }),
@@ -261,25 +241,21 @@ export async function burnOverlayIntoVideo(videoBlob, { caption = "", capturedAt
           ? video.duration * 1000 + 1000
           : 5000;
         setTimeout(() => {
-          console.warn("[burnOverlay] onended 타임아웃 - 강제로 다음 단계 진행", { timeoutMs });
           resolve();
         }, timeoutMs);
       }),
     ]);
 
     if (rafId) cancelAnimationFrame(rafId);
-    console.log("[burnOverlay] 렌더링된 프레임 수:", frameCount);
 
     // 마지막 프레임이 확실히 담기도록 한 프레임 더 그린 뒤 정지
     ctx.drawImage(video, 0, 0, width, height);
     drawOverlay(ctx, width, height, { timeLabel, caption: caption.trim() });
 
-    console.log("[burnOverlay] recorder.stop() 호출, state:", recorder.state);
     if (recorder.state !== "inactive") {
       recorder.stop();
     }
     const result = await recordingDone;
-    console.log("[burnOverlay] 합성 완료", { size: result.size, type: result.type });
 
     // 합성 결과가 비정상이면(0바이트 등) 원본을 사용
     return result && result.size > 0 ? result : videoBlob;

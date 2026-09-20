@@ -19,6 +19,8 @@
 // SDK 버전은 package.json의 firebase 버전과 맞추는 게 좋다.
 // ============================================================
 
+/* global importScripts, firebase */
+
 importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js");
 
