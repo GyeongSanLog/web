@@ -10,31 +10,31 @@ import { getKakaoRedirectUrl } from "../utils/kakao";
  * 카카오가 이 경로로 "?code=인가코드" 형태의 쿼리스트링을 붙여서
  * 되돌려보낸다. 여기서 그 code를 꺼내 서버에 전달해 토큰을 발급받는다.
  */
+/** 쿼리스트링을 한 번만 읽어서 {code, error} 로 정리 */
+function readCallbackParams() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  if (params.get("error")) {
+    // 사용자가 카카오 로그인 동의 화면에서 취소한 경우 등
+    return { code: null, error: "카카오 로그인이 취소됐어요" };
+  }
+  if (!code) return { code: null, error: "인가 코드를 받지 못했어요" };
+  return { code, error: "" };
+}
+
 export default function OauthKakao() {
   const navigate = useNavigate();
-  const [error, setError] = useState("");
+  // 동기적으로 알 수 있는 에러(취소, code 없음)는 초기 state로 바로 넣는다.
+  // effect 안에서 setState를 동기 호출하면 불필요한 렌더가 한 번 더 돌기 때문.
+  const [{ code, error: initialError }] = useState(readCallbackParams);
+  const [error, setError] = useState(initialError);
   // React StrictMode(개발 모드)에서 useEffect가 두 번 실행될 수 있는데,
   // 인가 코드는 1회용이라 두 번째 호출은 서버가 거부함. 중복 호출 방지.
   const calledRef = useRef(false);
 
   useEffect(() => {
-    if (calledRef.current) return;
+    if (!code || calledRef.current) return;
     calledRef.current = true;
-
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const kakaoError = params.get("error");
-
-    if (kakaoError) {
-      // 사용자가 카카오 로그인 동의 화면에서 취소한 경우 등
-      setError("카카오 로그인이 취소됐어요");
-      return;
-    }
-
-    if (!code) {
-      setError("인가 코드를 받지 못했어요");
-      return;
-    }
 
     kakaoLogin({ authCode: code, redirectUrl: getKakaoRedirectUrl() })
       .then(() => {
@@ -44,7 +44,7 @@ export default function OauthKakao() {
         console.error("카카오 로그인 실패:", err);
         setError(err.message || "카카오 로그인에 실패했어요");
       });
-  }, [navigate]);
+  }, [code, navigate]);
 
   return (
     <div className="h-full flex flex-col items-center justify-center bg-[#FDFAF4] px-6">

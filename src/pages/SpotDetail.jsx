@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SectionTitle from "../components/SectionTitle";
 import {
@@ -20,9 +20,10 @@ export default function SpotDetail() {
   const [togglingFavorite, setTogglingFavorite] = useState(false);
   const [recommendations, setRecommendations] = useState([]);
 
+  // loading/error를 effect에서 리셋하지 않는 이유: App.jsx에서 <SpotDetail key={id}>
+  // 로 렌더링해서 id가 바뀌면 컴포넌트가 새로 마운트되고 state가 초기값으로 돌아감.
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
     fetchAreaDetail(id)
       .then(async (data) => {
@@ -126,41 +127,22 @@ export default function SpotDetail() {
   const cat = categoryStyle(spot.category);
 
   return (
-    <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-8">
+    // 바깥은 위치 기준(relative)만 담당하고 스크롤하지 않는다. 스크롤은 안쪽
+    // div가 담당하고, 뒤로가기·찜 버튼은 그 스크롤 컨테이너 밖의 형제로 둔다.
+    //
+    // [수정 전 버그] 예전엔 이 최상위 div 자체가 overflow-y-auto라서, 버튼의
+    // absolute가 "스크롤되는 콘텐츠" 기준으로 위치가 잡혔음. 그래서 아래로
+    // 내리면 버튼도 이미지와 함께 화면 위로 같이 밀려 사라졌음. GroupDetail의
+    // 모달을 고칠 때와 같은 구조(바깥 relative + 안쪽 스크롤 + 형제 오버레이).
+    <div className="h-full relative">
+      <div className="h-full overflow-y-auto bg-[#FDFAF4] pb-8">
 
-      {/* 이미지 슬라이드 영역 */}
-      <div className="relative">
-        <div className="w-full h-[210px] bg-gradient-to-br from-[#DCE7D6] to-[#9DB894] flex items-center justify-center overflow-hidden">
-          {images[0] ? (
-            <img src={images[0]} alt={spot.name} className="w-full h-full object-cover" />
-          ) : (
-            <ImageIcon />
-          )}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#FDFAF4] to-transparent" />
+        {/* 이미지 슬라이드 영역 */}
+        <div className="relative">
+          <ImageSlider images={images} alt={spot.name} />
         </div>
-        <button
-          onClick={() => navigate(-1)}
-          className="absolute top-3.5 left-3.5 w-9 h-9 rounded-full bg-[#FFFCF6]/92 backdrop-blur shadow-sm shadow-black/10 flex items-center justify-center gs-press"
-          aria-label="뒤로가기"
-        >
-          <ArrowLeftIcon />
-        </button>
-        <button
-          onClick={handleToggleFavorite}
-          disabled={togglingFavorite}
-          className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-[#FFFCF6]/92 backdrop-blur shadow-sm shadow-black/10 flex items-center justify-center gs-press disabled:opacity-60"
-          aria-label="찜하기"
-        >
-          <HeartIcon filled={favorited} />
-        </button>
-        {images.length > 0 && (
-          <span className="absolute bottom-2.5 right-3.5 text-[11px] text-white bg-black/45 px-2 py-0.5 rounded-full">
-            슬라이드 1 / {images.length}
-          </span>
-        )}
-      </div>
 
-      <div className="px-5 pt-4">
+        <div className="px-5 pt-4">
 
         <div className="flex items-center gap-1.5 mb-1.5 gs-rise">
           {spot.category && (
@@ -243,8 +225,138 @@ export default function SpotDetail() {
           </>
         )}
 
+        </div>
       </div>
+
+      {/* 뒤로가기 · 찜 버튼 - 스크롤 컨테이너 밖에 있어 항상 화면 위쪽에 고정됨 */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-3.5 left-3.5 w-9 h-9 rounded-full bg-[#FFFCF6]/92 backdrop-blur shadow-sm shadow-black/10 flex items-center justify-center gs-press"
+        aria-label="뒤로가기"
+      >
+        <ArrowLeftIcon />
+      </button>
+      <button
+        onClick={handleToggleFavorite}
+        disabled={togglingFavorite}
+        className="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-[#FFFCF6]/92 backdrop-blur shadow-sm shadow-black/10 flex items-center justify-center gs-press disabled:opacity-60"
+        aria-label="찜하기"
+      >
+        <HeartIcon filled={favorited} />
+      </button>
     </div>
+  );
+}
+
+/**
+ * 가로 스와이프 + 좌우 버튼 이미지 슬라이더.
+ * 예전엔 첫 장만 보여주면서 "슬라이드 1 / 5" 카운터만 떠 있어서, 나머지 사진을
+ * 볼 방법이 없었음. CSS scroll-snap으로 넘기고, 스크롤 위치로 현재 장을 계산한다.
+ *
+ * [추가] 처음엔 스와이프/점 클릭으로만 넘기게 했는데, 데스크톱(마우스)에서는
+ * 좌우로 끌 수 없고 점을 하나하나 눌러야 해서 넘기기 불편했음 → 화살표
+ * 버튼을 추가함. 터치 스와이프와 점 인디케이터는 그대로 유지.
+ *
+ * 사진이 없으면 아이콘 플레이스홀더, 한 장이면 카운터/점/화살표 모두 생략한다.
+ */
+function ImageSlider({ images, alt }) {
+  const scrollerRef = useRef(null);
+  const [index, setIndex] = useState(0);
+
+  function handleScroll() {
+    const el = scrollerRef.current;
+    if (!el || !el.clientWidth) return;
+    setIndex(Math.round(el.scrollLeft / el.clientWidth));
+  }
+
+  function goTo(i) {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  }
+
+  const canPrev = index > 0;
+  const canNext = index < images.length - 1;
+
+  if (images.length === 0) {
+    return (
+      <div className="relative w-full h-[210px] bg-gradient-to-br from-[#DCE7D6] to-[#9DB894] flex items-center justify-center overflow-hidden">
+        <ImageIcon />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#FDFAF4] to-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full h-[210px] bg-[#F4EFE6] overflow-hidden">
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+      >
+        {images.map((src, i) => (
+          <img
+            key={`${src}-${i}`}
+            src={src}
+            alt={images.length > 1 ? `${alt} ${i + 1}` : alt}
+            loading={i === 0 ? "eager" : "lazy"}
+            draggable={false}
+            className="w-full h-full object-cover shrink-0 snap-start"
+          />
+        ))}
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#FDFAF4] to-transparent" />
+
+      {images.length > 1 && (
+        <>
+          {/* 좌우 화살표 - 끝에서는 숨겨서 더 넘길 게 없다는 걸 알림.
+              뒤로가기/찜 버튼(SpotDetail 최상단)과 겹치지 않도록 세로 중앙에 배치 */}
+          {canPrev && (
+            <button
+              onClick={() => goTo(index - 1)}
+              aria-label="이전 사진"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center gs-press"
+            >
+              <SliderArrowIcon direction="left" />
+            </button>
+          )}
+          {canNext && (
+            <button
+              onClick={() => goTo(index + 1)}
+              aria-label="다음 사진"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center gs-press"
+            >
+              <SliderArrowIcon direction="right" />
+            </button>
+          )}
+
+          <span className="absolute bottom-2.5 right-3.5 text-[11px] text-white bg-black/45 px-2 py-0.5 rounded-full tabular-nums">
+            {index + 1} / {images.length}
+          </span>
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                aria-label={`${i + 1}번째 사진`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === index ? "w-4 bg-white" : "w-1.5 bg-white/55"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function SliderArrowIcon({ direction }) {
+  const d = direction === "left" ? "M14.5 6l-6 6 6 6" : "M9.5 6l6 6-6 6";
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d={d} stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

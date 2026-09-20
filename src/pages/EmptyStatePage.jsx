@@ -4,15 +4,21 @@ import { useNavigate } from "react-router-dom";
  * 아직 API/데이터가 준비되지 않은 마이페이지 하위 메뉴(공지사항, 문의사항, 찜 목록 등)를 위한
  * 공용 빈 상태 페이지. title/description/icon만 바꿔 재사용한다.
  */
-export default function EmptyStatePage({ title, description, icon: Icon = BellIcon }) {
+export default function EmptyStatePage({
+  title,
+  description,
+  icon: Icon = BellIcon,
+  backTo = null, // 지정하면 뒤로가기 대신 그 경로로 이동 (404처럼 돌아갈 곳이 없을 때)
+}) {
   const navigate = useNavigate();
+  const goBack = () => (backTo ? navigate(backTo, { replace: true }) : navigate(-1));
 
   return (
     <div className="relative h-full overflow-y-auto bg-[#FDFAF4] px-6 py-8">
       <div className="w-full max-w-sm mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             className="w-9 h-9 rounded-full bg-[#F6ECDD] border border-[#EBDCC4] flex items-center justify-center text-[#2A2420] gs-press"
             aria-label="뒤로가기"
           >

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { pickMimeType } from "../utils/videoOverlay";
 
 // 촬영 시간(초) — 셔터를 누르면 이 시간만큼 영상이 녹화됩니다.
 const RECORD_SECONDS = 2;
@@ -42,7 +43,6 @@ export default function Camera() {
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
 
-  const [ready, setReady] = useState(false);
   const [denied, setDenied] = useState(false);
   const [facingUser, setFacingUser] = useState(false); // 후면 카메라 기본
   const [recording, setRecording] = useState(false);
@@ -73,11 +73,9 @@ export default function Camera() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
-        setReady(true);
         setDenied(false);
       } catch {
         setDenied(true);
-        setReady(false);
       }
     }
 
@@ -110,28 +108,25 @@ export default function Camera() {
     }, 30);
 
     let recorder = null;
-    console.log("[Camera] handleShutter 시작", {
-      hasStream: !!streamRef.current,
-      hasMediaRecorder: typeof MediaRecorder !== "undefined",
-    });
     if (streamRef.current && typeof MediaRecorder !== "undefined") {
       try {
         chunksRef.current = [];
-        recorder = new MediaRecorder(streamRef.current);
-        console.log("[Camera] MediaRecorder 생성됨", { state: recorder.state, mimeType: recorder.mimeType });
+        // 브라우저가 지원하는 포맷으로 녹화 (크롬=webm, iOS 사파리=mp4).
+        // 빈 문자열이면 브라우저 기본값에 맡긴다.
+        const mimeType = pickMimeType();
+        recorder = new MediaRecorder(
+          streamRef.current,
+          mimeType ? { mimeType } : undefined
+        );
         recorder.ondataavailable = (e) => {
-          console.log("[Camera] ondataavailable, size:", e.data.size);
           if (e.data.size > 0) chunksRef.current.push(e.data);
         };
         recorderRef.current = recorder;
         recorder.start();
-        console.log("[Camera] recorder.start() 호출됨, state:", recorder.state);
       } catch (err) {
-        console.error("[Camera] MediaRecorder 생성/시작 실패:", err);
+        console.error("MediaRecorder 시작 실패:", err);
         recorder = null;
       }
-    } else {
-      console.warn("[Camera] 스트림 또는 MediaRecorder 없음 - 녹화 불가");
     }
 
     setTimeout(() => {
@@ -153,12 +148,8 @@ export default function Camera() {
 
       // 셔터를 누른 시점을 촬영 시각으로 기록.
       // 업로드 API(capturedAt)가 이 값을 기준으로 시간대(slotIndex)를 계산함.
-      //
-      // 주의: toISOString()은 항상 UTC로 변환하는데, 서버가 이 값을
-      // "그 지역(KST) 시각"으로 오인하고 slotIndex를 계산하는 문제가
-      // 발견됨 (한국시간 11시 촬영 → UTC 2시로 변환되어 전송 → 서버가
-      // 이를 그대로 "2시대"로 slotIndex 계산). 그래서 UTC 대신 타임존
-      // 오프셋을 포함한 로컬 시간 문자열(KST면 +09:00)을 만들어서 보냄.
+      // 형식은 위 toLocalIsoString() 주석 참고 — 로컬 시:분 숫자에 Z만 붙인
+      // 편법 형식이며, 이유도 거기 적혀 있음.
       const capturedAt = toLocalIsoString(new Date(startedAt));
 
       const goNext = (videoUrl, videoBlob) => {
@@ -172,19 +163,16 @@ export default function Camera() {
       };
 
       if (recorder && recorder.state !== "inactive") {
-        console.log("[Camera] recorder.stop() 호출, 현재 chunk 개수:", chunksRef.current.length);
         recorder.onstop = () => {
-          console.log("[Camera] recorder onstop, 최종 chunk 개수:", chunksRef.current.length);
-          const blob = new Blob(chunksRef.current, { type: "video/webm" });
-          console.log("[Camera] 생성된 blob", { size: blob.size, type: blob.type });
+          // Blob 타입은 실제 녹화된 포맷을 따른다 (webm 고정이었던 걸 수정)
+          const blob = new Blob(chunksRef.current, {
+            type: recorder.mimeType || "video/webm",
+          });
           goNext(URL.createObjectURL(blob), blob);
         };
         recorder.stop();
       } else {
-        console.warn("[Camera] recorder가 없거나 이미 inactive라 blob 없이 이동", {
-          hasRecorder: !!recorder,
-          state: recorder?.state,
-        });
+        // 카메라를 못 쓰는 상태 — 결과 화면에서 "영상 없음"으로 막힘
         goNext(null, null);
       }
     }, totalMs);
