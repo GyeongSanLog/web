@@ -7,16 +7,19 @@
 // - createGroup
 //     → POST /api/group 실제 연동 완료
 // - joinGroupByInviteCode
-//     → POST /api/group/invite/{inviteCode}/join 실제 연동 완료 (오늘 신규)
+//     → POST /api/group/invite/{inviteCode}/join 실제 연동 완료
 //     → 화면 연결은 아직 안 함 (참여 화면 위치 미정)
 // - fetchGroupInfo
-//     → GET /api/group/{groupId} 실제 연동 완료 (그룹정보+멤버)
+//     → GET /api/group/{groupId} 실제 연동 완료 (그룹정보+멤버+병합 상태)
+// - retryMerge                                                 ← 신규
+//     → POST /api/group/{groupId}/merge/retry 실제 연동 완료
+//     → 공유용 병합 영상이 FAILED일 때 다시 만들기 (MergedVideoSection에서 사용)
 // - withdrawFromGroup
 //     → DELETE /api/group/{groupId}/withdraw 실제 연동 완료
 // - fetchGroupClips / uploadClip
-//     → GET,POST /api/log/{groupId} 실제 연동 완료 (오늘 신규, clip 태그)
+//     → GET,POST /api/log/{groupId} 실제 연동 완료 (clip 태그)
 // - writeLetter / fetchMyLetters / fetchLetter
-//     → /api/log/{groupId}/letter 등 실제 연동 완료 (오늘 신규, letter 태그)
+//     → /api/log/{groupId}/letter 등 실제 연동 완료 (letter 태그)
 // - fetchGroupSessions(셋로그 분할화면 세션)
 //     → 보류 중인 SetlogViewer.jsx 전용 목데이터. 라우트에서 빠져 있어
 //       실제로는 호출되지 않지만, 뷰어를 되살릴 때를 위해 남겨둠.
@@ -29,6 +32,20 @@ import { BASE_URL, authFetch } from "./client";
 import { parseServerDateTime } from "../utils/trip";
 
 const delay = (ms = 300) => new Promise((res) => setTimeout(res, ms));
+
+/**
+ * 공유용 병합 영상의 진행 상태 (서버 스웨거 enum과 정확히 일치해야 함)
+ *
+ *   NOT_STARTED → PROCESSING → DONE
+ *                           ↘ FAILED (→ retryMerge로 다시 시도 가능)
+ *
+ * 주의: 완료 상태 이름은 COMPLETED가 아니라 "DONE"임.
+ * 문자열을 화면 곳곳에 직접 쓰면 오타 나기 쉬워서 상수로 묶어둠.
+ */
+export const MERGE_NOT_STARTED = "NOT_STARTED";
+export const MERGE_PROCESSING = "PROCESSING";
+export const MERGE_DONE = "DONE";
+export const MERGE_FAILED = "FAILED";
 
 // --- 아직 목데이터인 부분 (그룹 상세 / 세션 / 업로드) ---
 
@@ -320,11 +337,15 @@ export async function joinGroupByInviteCode(inviteCode) {
  *   이 API 응답을 쓰면 됨
  * - 클립/편지 목록은 이 API에 없음 → fetchGroupClips / fetchMyLetters를
  *   Promise.all로 함께 호출해서 합치면 됨 (GroupDetail.jsx 참고)
+ * - mergeStatus(NOT_STARTED/PROCESSING/DONE/FAILED)와 mergedVideoUrl도
+ *   이 응답에 들어있음. 병합이 진행 중일 때는 MergedVideoSection이
+ *   이 함수를 주기적으로 다시 호출(폴링)해서 상태 변화를 감지함.
  */
 export async function fetchGroupInfo(groupId) {
   const res = await authFetch(`${BASE_URL}/api/group/${groupId}`);
 
   if (!res.ok) {
+    if (res.status === 401) throw new Error("AUTH_EXPIRED");
     if (res.status === 403) {
       throw new Error("그룹 멤버만 조회할 수 있어요");
     }
@@ -332,6 +353,42 @@ export async function fetchGroupInfo(groupId) {
   }
 
   return res.json(); // GroupDetailResponse
+}
+
+/**
+ * 공유용 병합 영상 다시 만들기 (병합 재시도)
+ * POST /api/group/{groupId}/merge/retry
+ * 인증 필요 → authFetch 사용
+ *
+ * 서버는 병합을 자동으로 시작하므로 "처음 만들기" API는 없고,
+ * 이 API는 mergeStatus가 FAILED일 때 다시 시도하는 용도로만 존재함.
+ *
+ * Request body: 없음
+ * Response:
+ *   202 접수됨 — 백그라운드에서 병합 시작. 결과는 fetchGroupInfo의
+ *                mergeStatus로 확인 (PROCESSING → DONE / FAILED)
+ *   404 그룹이 없거나 그룹 멤버가 아님
+ *   409 여행이 아직 안 끝났거나, FAILED 상태가 아님
+ *   503 병합 작업 대기열이 가득 참 (잠시 후 다시 시도)
+ *
+ * 응답 바디가 없는 202라서 res.json()을 부르지 않음.
+ */
+export async function retryMerge(groupId) {
+  const res = await authFetch(`${BASE_URL}/api/group/${groupId}/merge/retry`, {
+    method: "POST",
+  });
+
+  if (res.ok) return { success: true }; // 202
+
+  if (res.status === 401) throw new Error("AUTH_EXPIRED");
+  if (res.status === 404) throw new Error("그룹을 찾을 수 없어요");
+  if (res.status === 409) {
+    throw new Error("지금은 다시 만들 수 없는 상태예요");
+  }
+  if (res.status === 503) {
+    throw new Error("요청이 많아요. 잠시 후 다시 시도해주세요");
+  }
+  throw new Error("영상 다시 만들기에 실패했어요");
 }
 
 /**
