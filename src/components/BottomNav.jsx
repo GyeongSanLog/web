@@ -44,8 +44,18 @@ export default function BottomNav() {
 
   return (
     <>
+      {/*
+        [모바일 대응] 하단 여백을 고정 mb-3(12px) 대신
+        max(0.75rem, env(safe-area-inset-bottom)) 으로 준다.
+        - env(safe-area-inset-bottom): 안드로이드 제스처바/3버튼 네비바, 아이폰 홈 인디케이터 높이
+          (viewport-fit=cover 가 index.html 에 있어야 이 값이 채워진다)
+        - max(...): 그런 시스템 바가 없는 환경(PC 등)에서는 값이 0 이므로
+          최소 12px 는 기존처럼 띄운다.
+        Tailwind v4 는 [] 안에 임의 값을 넣을 수 있어서 mb-[max(...)] 형태로 쓴다.
+        (공백은 _ 로 대체)
+      */}
       <nav
-        className="absolute bottom-0 left-0 right-0 mx-3 mb-3 rounded-[28px] bg-[#FFFCF6]/95 backdrop-blur shadow-lg shadow-[#5C4433]/15 border border-[#EBE0CE] px-2 py-2.5 flex items-center justify-around"
+        className="absolute bottom-0 left-0 right-0 mx-3 mb-[max(0.75rem,env(safe-area-inset-bottom))] rounded-[28px] bg-[#FFFCF6]/95 backdrop-blur shadow-lg shadow-[#5C4433]/15 border border-[#EBE0CE] px-2 py-2.5 flex items-center justify-around"
         aria-label="하단 내비게이션"
       >
         {navItems.slice(0, 2).map((item) => (
