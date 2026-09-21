@@ -30,10 +30,19 @@ import Notifications from "./pages/Notifications";
 // 중요: 이 프레임 자체는 스크롤하지 않습니다 (overflow-hidden).
 // 스크롤은 각 페이지 내부의 콘텐츠 영역이 담당하며,
 // 그래야 하단 네비바가 스크롤과 무관하게 고정됩니다.
+//
+// [모바일 대응]
+// h-screen(=100vh)은 안드로이드 크롬에서 "주소창이 사라졌을 때의 최대 높이"라서,
+// 주소창이 보이는 상태에선 프레임 아래쪽이 화면 밖으로 밀려 네비바가 잘렸음.
+// h-dvh(=100dvh, dynamic viewport height)는 주소창 상태에 맞춰 실시간으로
+// "지금 실제로 보이는 높이"를 따라가므로 이 문제가 없다.
+//
+// 실제 폰(sm 미만)에서는 프레임 장식 없이 화면 전체를 쓰고,
+// 데스크톱(sm 이상)에서만 둥근 폰 모양 프레임으로 보여준다.
 function PhoneFrame({ children }) {
   return (
-    <div className="h-screen w-full bg-gradient-to-b from-[#DBE3D5] via-[#E9E0D0] to-[#E0D4C0] gs-paper flex items-center justify-center overflow-hidden">
-      <div className="w-full max-w-[430px] h-screen bg-[#FDFAF4] sm:h-[92vh] sm:my-4 sm:rounded-[2.5rem] sm:shadow-2xl sm:shadow-[#4B3A28]/25 overflow-hidden relative flex flex-col">
+    <div className="h-dvh w-full bg-gradient-to-b from-[#DBE3D5] via-[#E9E0D0] to-[#E0D4C0] gs-paper flex items-center justify-center overflow-hidden">
+      <div className="w-full max-w-[430px] h-dvh bg-[#FDFAF4] sm:h-[92dvh] sm:my-4 sm:rounded-[2.5rem] sm:shadow-2xl sm:shadow-[#4B3A28]/25 overflow-hidden relative flex flex-col">
         {children}
       </div>
     </div>
