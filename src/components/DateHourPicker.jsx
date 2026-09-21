@@ -62,13 +62,16 @@ function PickerSheet({ value, min, onCancel, onConfirm }) {
   const minDate = min ? min.slice(0, 10) : null; // "YYYY-MM-DD"
   const minHour = min ? Number(min.slice(11, 13)) : 0;
 
-  // 이미 값이 있으면 그 값으로 시작, 없으면 빈 상태로 시작
-  const [draftDate, setDraftDate] = useState(value ? value.slice(0, 10) : null);
-  const [draftHour, setDraftHour] = useState(value ? Number(value.slice(11, 13)) : null);
+  // ← 수정: 처음 열었을 때 기본으로 골라둘 값
+  // 1) 이미 고른 값 → 2) min(시작=지금 시각, 종료=시작 시각) → 3) 지금 시각
+  // 예전엔 값이 없으면 null로 시작해서, 날짜를 한 번 눌러야 시간이 활성화됐음
+  const initial = value || min || toHourValue(new Date());
 
-  // 달력에 지금 보여주는 연/월 (월은 1~12)
-  // 기준: 기존 값 → 최소 날짜 → 오늘 순서
-  const base = parseDate((value && value.slice(0, 10)) || minDate || toDateStr(new Date()));
+  const [draftDate, setDraftDate] = useState(initial.slice(0, 10)); // ← 수정
+  const [draftHour, setDraftHour] = useState(Number(initial.slice(11, 13))); // ← 수정
+
+  // 달력에 지금 보여주는 연/월 (월은 1~12) - 기본 선택값이 있는 달을 보여준다
+  const base = parseDate(initial.slice(0, 10)); // ← 수정
   const [viewYear, setViewYear] = useState(base.y);
   const [viewMonth, setViewMonth] = useState(base.m);
 
@@ -294,6 +297,11 @@ function pad(n) {
 /** Date → "YYYY-MM-DD" (로컬 시간 기준) */
 function toDateStr(date) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Date → 정시로 내린 "YYYY-MM-DDTHH:00" (로컬 시간 기준) ← 수정: 새로 추가 */
+function toHourValue(date) {
+  return `${toDateStr(date)}T${pad(date.getHours())}:00`;
 }
 
 /** "YYYY-MM-DD" → { y, m, d } (숫자) */
